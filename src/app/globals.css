@@ -1,0 +1,755 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* =================================================================
+     Editorial Color Palette — reference cascade-sensitive vars
+     ================================================================= */
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-inverse-on-surface: var(--inverse-on-surface);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-surface-tint: var(--surface-tint);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-inverse-primary: var(--inverse-primary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-on-tertiary-container: var(--on-tertiary-container);
+  --color-error-container: var(--error-container);
+  --color-on-error-container: var(--on-error-container);
+  --color-primary-fixed: var(--primary-fixed);
+  --color-primary-fixed-dim: var(--primary-fixed-dim);
+  --color-on-primary-fixed: var(--on-primary-fixed);
+  --color-on-primary-fixed-variant: var(--on-primary-fixed-variant);
+  --color-secondary-fixed: var(--secondary-fixed);
+  --color-secondary-fixed-dim: var(--secondary-fixed-dim);
+  --color-on-secondary-fixed: var(--on-secondary-fixed);
+  --color-on-secondary-fixed-variant: var(--on-secondary-fixed-variant);
+  --color-tertiary-fixed: var(--tertiary-fixed);
+  --color-tertiary-fixed-dim: var(--tertiary-fixed-dim);
+  --color-on-tertiary-fixed: var(--on-tertiary-fixed);
+  --color-on-tertiary-fixed-variant: var(--on-tertiary-fixed-variant);
+
+  /* =================================================================
+     Flowbite Theme tokens
+     ================================================================= */
+  --color-neutral-primary: var(--neutral-primary);
+  --color-neutral-primary-medium: var(--neutral-primary-medium);
+  --color-neutral-primary-soft: var(--neutral-primary-soft);
+  --color-neutral-secondary-soft: var(--neutral-secondary-soft);
+  --color-neutral-tertiary-medium: var(--neutral-tertiary-medium);
+  --color-neutral-tertiary: var(--neutral-tertiary);
+  --color-brand: var(--brand-color);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-medium: var(--brand-medium);
+  --color-success-soft: var(--success-soft);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-heading: var(--text-heading);
+  --color-body: var(--text-body);
+  --color-body-subtle: var(--text-body-subtle);
+  --color-fg-brand: var(--fg-brand);
+  --color-fg-success: var(--fg-success);
+  --color-fg-danger: var(--fg-danger);
+  --color-fg-warning: var(--fg-warning);
+  --color-default: var(--border-default);
+  --color-default-medium: var(--border-default-medium);
+  --radius-base: var(--rounded-base);
+
+  /* =================================================================
+     shadcn/ui token mapping → editorial palette
+     ================================================================= */
+  --color-background: var(--surface);
+  --color-foreground: var(--on-surface);
+  --color-card: var(--surface-container-lowest);
+  --color-card-foreground: var(--on-surface);
+  --color-popover: var(--surface-container-lowest);
+  --color-popover-foreground: var(--on-surface);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-fg);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-fg);
+  --color-muted: var(--surface-container);
+  --color-muted-foreground: var(--on-surface-variant);
+  --color-accent: var(--surface-container-high);
+  --color-accent-foreground: var(--on-surface);
+  --color-destructive: var(--destructive);
+  --color-border: var(--outline-variant);
+  --color-input: var(--input);
+  --color-ring: var(--outline);
+
+  /* =================================================================
+     Sidebar
+     ================================================================= */
+  --color-sidebar: var(--surface);
+  --color-sidebar-foreground: var(--on-surface);
+  --color-sidebar-muted: var(--surface-container);
+  --color-sidebar-border: var(--outline-variant);
+  --color-sidebar-accent: var(--surface-container-high);
+  --color-sidebar-accent-foreground: var(--on-surface);
+  --color-sidebar-ring: var(--outline);
+  --color-sidebar-primary: var(--primary-container);
+  --color-sidebar-primary-foreground: var(--on-primary-container);
+
+  /* =================================================================
+     Chart colors
+     ================================================================= */
+  --color-chart-1: var(--primary-container);
+  --color-chart-2: var(--secondary-container);
+  --color-chart-3: var(--tertiary-container);
+  --color-chart-4: var(--surface-container-high);
+  --color-chart-5: var(--surface-container);
+
+  /* =================================================================
+     Typography — font families
+     ================================================================= */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-serif: "EB Garamond", Georgia, serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --font-display-lg: var(--font-serif);
+  --font-headline-lg: var(--font-serif);
+  --font-headline-lg-mobile: var(--font-serif);
+  --font-headline-md: var(--font-serif);
+  --font-body-lg: var(--font-sans);
+  --font-body-md: var(--font-sans);
+  --font-label-lg: var(--font-sans);
+  --font-label-md: var(--font-sans);
+  --font-caption: var(--font-sans);
+  --font-heading: var(--font-sans);
+
+  /* =================================================================
+     Typography — font sizes (with line-height, letter-spacing, weight)
+     ================================================================= */
+  --font-size-display-lg: 64px;
+  --font-size-display-lg--line-height: 1.1;
+  --font-size-display-lg--letter-spacing: -0.02em;
+  --font-size-display-lg--font-weight: 700;
+
+  --font-size-headline-lg: 40px;
+  --font-size-headline-lg--line-height: 1.2;
+  --font-size-headline-lg--font-weight: 700;
+
+  --font-size-headline-lg-mobile: 32px;
+  --font-size-headline-lg-mobile--line-height: 1.2;
+  --font-size-headline-lg-mobile--font-weight: 700;
+
+  --font-size-headline-md: 24px;
+
+  --font-size-body-lg: 20px;
+  --font-size-body-lg--line-height: 1.6;
+  --font-size-body-lg--font-weight: 400;
+
+  --font-size-body-md: 17px;
+  --font-size-body-md--line-height: 1.6;
+  --font-size-body-md--font-weight: 400;
+
+  --font-size-label-lg: 14px;
+  --font-size-label-lg--line-height: 1.2;
+  --font-size-label-lg--letter-spacing: 0.05em;
+  --font-size-label-lg--font-weight: 600;
+
+  --font-size-label-md: 12px;
+  --font-size-label-md--line-height: 1.2;
+  --font-size-label-md--letter-spacing: 0.05em;
+  --font-size-label-md--font-weight: 500;
+
+  --font-size-caption: 11px;
+  --font-size-caption--line-height: 1.4;
+  --font-size-caption--font-weight: 400;
+
+  /* =================================================================
+     Spacing tokens
+     ================================================================= */
+  --spacing-section-gap: 80px;
+  --spacing-gutter: 24px;
+  --spacing-container-max: 1280px;
+  --spacing-stack-unit: 8px;
+  --spacing-edge-margin-desktop: 40px;
+  --spacing-edge-margin-mobile: 20px;
+
+  /* =================================================================
+     Radii — sharp corners everywhere
+     ================================================================= */
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+}
+
+/* =================================================================
+   Light mode — editorial palette
+   ================================================================= */
+:root {
+  /* Surface hierarchy */
+  --surface: #fdf8f8;
+  --surface-dim: #ddd9d8;
+  --surface-bright: #fdf8f8;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f7f3f2;
+  --surface-container: #f1edec;
+  --surface-container-high: #ebe7e6;
+  --surface-container-highest: #e5e2e1;
+
+  /* On-surface */
+  --on-surface: #1c1b1b;
+  --on-surface-variant: #444748;
+
+  /* Inverse */
+  --inverse-surface: #313030;
+  --inverse-on-surface: #f4f0ef;
+  --inverse-primary: #c8c6c5;
+
+  /* Outline */
+  --outline: #747878;
+  --outline-variant: #c4c7c7;
+
+  /* Surface tint */
+  --surface-tint: #5f5e5e;
+
+  /* Primary container */
+  --primary-container: #1c1b1b;
+  --on-primary-container: #858383;
+
+  /* Secondary container */
+  --secondary-container: #e3e2e2;
+  --on-secondary-container: #646464;
+
+  /* Tertiary container */
+  --tertiary-container: #1d1b1a;
+  --on-tertiary-container: #868381;
+
+  /* Error container */
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+
+  /* Primary fixed */
+  --primary-fixed: #e5e2e1;
+  --primary-fixed-dim: #c8c6c5;
+  --on-primary-fixed: #1c1b1b;
+  --on-primary-fixed-variant: #474646;
+
+  /* Secondary fixed */
+  --secondary-fixed: #e3e2e2;
+  --secondary-fixed-dim: #c7c6c6;
+  --on-secondary-fixed: #1b1c1c;
+  --on-secondary-fixed-variant: #464747;
+
+  /* Tertiary fixed */
+  --tertiary-fixed: #e6e1df;
+  --tertiary-fixed-dim: #cac6c3;
+  --on-tertiary-fixed: #1d1b1a;
+  --on-tertiary-fixed-variant: #484645;
+
+  /* shadcn aliases */
+  --primary: #000000;
+  --primary-fg: #ffffff;
+  --secondary: #5e5e5e;
+  --secondary-fg: #ffffff;
+  --destructive: #ba1a1a;
+  --input: transparent;
+  --radius: 0;
+
+  /* Flowbite Theme Variables */
+  --neutral-primary: #ffffff;
+  --neutral-primary-medium: #f3f4f6;
+  --neutral-primary-soft: #f9fafb;
+  --neutral-secondary-soft: #f3f4f6;
+  --neutral-tertiary-medium: #e5e7eb;
+  --neutral-tertiary: #f3f4f6;
+  --brand-color: #4f46e5;
+  --brand-strong: #4338ca;
+  --brand-medium: rgba(99, 102, 241, 0.5);
+  --success-soft: #def7ec;
+  --danger-soft: #fde8e8;
+  --warning-soft: #fdf6b2;
+  --text-heading: #111827;
+  --text-body: #4b5563;
+  --text-body-subtle: #9ca3af;
+  --fg-brand: #4f46e5;
+  --fg-success: #03543f;
+  --fg-danger: #9b1c1c;
+  --fg-warning: #723b13;
+  --border-default: #e5e7eb;
+  --border-default-medium: #d1d5db;
+  --rounded-base: 0.5rem;
+}
+
+/* =================================================================
+   Dark mode — invert surface / on-surface
+   ================================================================= */
+.dark {
+  /* Surface hierarchy */
+  --surface: #111111;
+  --surface-dim: #0a0a0a;
+  --surface-bright: #1a1a1a;
+  --surface-container-lowest: #0d0d0d;
+  --surface-container-low: #111111;
+  --surface-container: #151515;
+  --surface-container-high: #1a1a1a;
+  --surface-container-highest: #1f1f1f;
+
+  /* On-surface */
+  --on-surface: #F7F7F5;
+  --on-surface-variant: #999999;
+
+  /* Inverse */
+  --inverse-surface: #F7F7F5;
+  --inverse-on-surface: #111111;
+  --inverse-primary: #5f5e5e;
+
+  /* Outline */
+  --outline: #666666;
+  --outline-variant: #333333;
+
+  /* Surface tint */
+  --surface-tint: #999999;
+
+  /* Primary container */
+  --primary-container: #333333;
+  --on-primary-container: #cccccc;
+
+  /* Secondary container */
+  --secondary-container: #222222;
+  --on-secondary-container: #999999;
+
+  /* Tertiary container */
+  --tertiary-container: #222222;
+  --on-tertiary-container: #999999;
+
+  /* Error container */
+  --error-container: #3b0004;
+  --on-error-container: #ffdad6;
+
+  /* Primary fixed */
+  --primary-fixed: #333333;
+  --primary-fixed-dim: #222222;
+  --on-primary-fixed: #F7F7F5;
+  --on-primary-fixed-variant: #cccccc;
+
+  /* Secondary fixed */
+  --secondary-fixed: #222222;
+  --secondary-fixed-dim: #1a1a1a;
+  --on-secondary-fixed: #F7F7F5;
+  --on-secondary-fixed-variant: #cccccc;
+
+  /* Tertiary fixed */
+  --tertiary-fixed: #222222;
+  --tertiary-fixed-dim: #1a1a1a;
+  --on-tertiary-fixed: #F7F7F5;
+  --on-tertiary-fixed-variant: #cccccc;
+
+  /* shadcn aliases */
+  --primary: #F7F7F5;
+  --primary-fg: #111111;
+  --secondary: #4a4a4a;
+  --secondary-fg: #F7F7F5;
+  --destructive: #ff6b6b;
+  --input: transparent;
+  --radius: 0;
+
+  /* Flowbite Theme Variables */
+  --neutral-primary: #09090b;
+  --neutral-primary-medium: #18181b;
+  --neutral-primary-soft: #27272a;
+  --neutral-secondary-soft: #18181b;
+  --neutral-tertiary-medium: #27272a;
+  --neutral-tertiary: #3f3f46;
+  --brand-color: #6366f1;
+  --brand-strong: #4f46e5;
+  --brand-medium: rgba(99, 102, 241, 0.3);
+  --success-soft: rgba(16, 185, 129, 0.1);
+  --danger-soft: rgba(239, 68, 68, 0.1);
+  --warning-soft: rgba(245, 158, 11, 0.1);
+  --text-heading: #f4f4f5;
+  --text-body: #a1a1aa;
+  --text-body-subtle: #71717a;
+  --fg-brand: #818cf8;
+  --fg-success: #34d399;
+  --fg-danger: #f87171;
+  --fg-warning: #fbbf24;
+  --border-default: #27272a;
+  --border-default-medium: #3f3f46;
+  --rounded-base: 0.5rem;
+}
+
+/* =================================================================
+   Base layer
+   ================================================================= */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  html {
+    @apply font-sans;
+  }
+  ::selection {
+    @apply bg-primary text-primary-foreground;
+  }
+}
+
+/* ===== Scrollbar minimalista ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--on-surface-variant);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ===== Editor (ProseMirror / Tiptap) ===== */
+.ProseMirror {
+  @apply outline-none min-h-[300px] py-8 px-0;
+}
+
+.ProseMirror p {
+  @apply mb-4 leading-relaxed;
+}
+
+.ProseMirror h1 {
+  @apply text-2xl font-semibold mb-4 mt-0 leading-snug;
+}
+
+.ProseMirror h2 {
+  @apply text-xl font-semibold mb-4 mt-0 leading-snug;
+}
+
+.ProseMirror h3 {
+  @apply text-lg font-semibold mb-3 mt-0 leading-snug;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  @apply pl-6 mb-4;
+}
+
+.ProseMirror li {
+  @apply mb-1;
+}
+
+.ProseMirror blockquote {
+  @apply border-l-4 border-outline-variant pl-4 ml-0 mr-0 italic text-on-surface-variant;
+}
+
+.ProseMirror code {
+  @apply bg-surface-container px-1 py-0.5 font-mono text-[0.9em];
+}
+
+.ProseMirror pre {
+  @apply bg-surface-container p-4 overflow-x-auto mb-4;
+}
+
+.ProseMirror pre code {
+  @apply bg-transparent p-0;
+}
+
+.ProseMirror hr {
+  @apply border-none border-t border-outline-variant my-8;
+}
+
+.ProseMirror a {
+  @apply text-primary underline;
+}
+
+.ProseMirror .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  @apply float-left text-on-surface-variant pointer-events-none h-0;
+}
+
+.ProseMirror ::selection {
+  @apply bg-primary/15 text-on-surface;
+}
+
+/* Custom button styled like the Bento Theme primary */
+.emerald-btn, .primary-btn {
+  background-color: #6366f1;
+  color: #ffffff;
+  border-radius: 1.5rem; /* Standardized to 24px (rounded-3xl) */
+  transition: all 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.emerald-btn:hover, .primary-btn:hover {
+  background-color: #4f46e5;
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+}
+
+.outline-btn {
+  background-color: transparent;
+  color: #f5f5f5;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1.5rem; /* Standardized to 24px (rounded-3xl) */
+  transition: all 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.outline-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: #6366f1;
+}
+
+/* Bento Apple-style shadow and card styling (Item 1.2) */
+.bento-card {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+html.light .bento-card {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+/* CTA Form & Input styling (Item 1.4) */
+.cta-form {
+  background-color: #0c0c0e !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.cta-input {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+}
+.cta-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+html.light .cta-form {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+html.light .cta-input {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #1a1512 !important;
+}
+
+/* Scrollbar overrides */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 3px;
+}
+
+/* LIGHT THEME STYLING OVERRIDES - Scoped to the editor workspace to keep LP unaffected */
+html.light .editor-workspace {
+  color-scheme: light;
+  background-color: #f4f3ef !important;
+  color: #1a1512 !important;
+}
+
+/* Central canvas background wrapper: warm, comfortable grey-beige */
+html.light .editor-workspace .bg-\[\#09090b\] {
+  background-color: #f4f3ef !important;
+  color: #1a1512 !important;
+}
+
+/* Main editor paper sheet: clean white to stand out and look like a physical paper page */
+html.light .editor-workspace .bg-neutral-900 {
+  background-color: #ffffff !important;
+  color: #1a1512 !important;
+}
+
+/* Inset boxes, inputs and detail cards */
+html.light .editor-workspace .bg-neutral-950 {
+  background-color: #f6f5f0 !important;
+  color: #1a1512 !important;
+}
+
+/* Soft secondary backgrounds for highlights and specific cards */
+html.light .editor-workspace .bg-neutral-900\/60,
+html.light .editor-workspace .bg-neutral-950\/40,
+html.light .editor-workspace .bg-neutral-950\/20,
+html.light .editor-workspace .bg-neutral-900\/20,
+html.light .editor-workspace .bg-neutral-950\/60,
+html.light .editor-workspace .bg-\[\#0c0c0e\] {
+  background-color: #efece4 !important;
+}
+
+/* Soft grey backgrounds for neutral components */
+html.light .editor-workspace .bg-neutral-800,
+html.light .editor-workspace .bg-neutral-850,
+html.light .editor-workspace .bg-neutral-750 {
+  background-color: #e5e2d9 !important;
+}
+
+/* Text overrides for light mode */
+html.light .editor-workspace .text-neutral-100 {
+  color: #1a1512 !important;
+}
+html.light .editor-workspace .text-neutral-200 {
+  color: #2c2421 !important;
+}
+html.light .editor-workspace .text-neutral-300 {
+  color: #4a423e !important;
+}
+html.light .editor-workspace .text-neutral-400,
+html.light .editor-workspace .text-zinc-400,
+html.light .editor-workspace .text-gray-400 {
+  color: #706a60 !important;
+}
+html.light .editor-workspace .text-neutral-500,
+html.light .editor-workspace .text-gray-500 {
+  color: #7c786e !important;
+}
+
+/* Standard white text in dark mode becomes dark neutral in light mode */
+html.light .editor-workspace .text-white {
+  color: #1a1512 !important;
+}
+
+/* Border overrides - soft warm border tones */
+html.light .editor-workspace .border-neutral-900,
+html.light .editor-workspace .border-neutral-850,
+html.light .editor-workspace .border-neutral-800,
+html.light .editor-workspace .border-neutral-800\/80,
+html.light .editor-workspace .border-neutral-700,
+html.light .editor-workspace .border-neutral-700\/50,
+html.light .editor-workspace .border-neutral-850\/50,
+html.light .editor-workspace hr {
+  border-color: #e6e3da !important;
+}
+
+/* Input fields and interactive controls */
+html.light .editor-workspace input,
+html.light .editor-workspace textarea,
+html.light .editor-workspace select {
+  background-color: #ffffff !important;
+  color: #1a1512 !important;
+  border-color: #d7d4ca !important;
+}
+
+html.light .editor-workspace input:focus,
+html.light .editor-workspace textarea:focus,
+html.light .editor-workspace select:focus {
+  border-color: #6366f1 !important;
+  outline: none;
+}
+
+html.light .editor-workspace input::placeholder,
+html.light .editor-workspace textarea::placeholder {
+  color: #a49f95 !important;
+}
+
+/* Primary/secondary text accents */
+html.light .editor-workspace .text-indigo-300,
+html.light .editor-workspace .text-indigo-400,
+html.light .editor-workspace .text-indigo-500 {
+  color: #4f46e5 !important;
+}
+
+html.light .editor-workspace .bg-indigo-500\/10,
+html.light .editor-workspace .bg-indigo-500\/15,
+html.light .editor-workspace .bg-indigo-500\/5 {
+  background-color: rgba(79, 70, 229, 0.08) !important;
+  color: #4f46e5 !important;
+}
+
+html.light .editor-workspace .hover\:bg-neutral-900:hover,
+html.light .editor-workspace .hover\:bg-neutral-950:hover,
+html.light .editor-workspace .hover\:bg-neutral-800:hover {
+  background-color: #f0ede5 !important;
+  color: #1a1512 !important;
+}
+
+html.light .editor-workspace .bg-neutral-900\/40 {
+  background-color: #f0ede5 !important;
+}
+
+html.light .editor-workspace .outline-btn {
+  color: #1a1512 !important;
+  border-color: #d7d4ca !important;
+}
+
+html.light .editor-workspace .outline-btn:hover {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+  border-color: #6366f1 !important;
+}
+
+/* Daily goal widget override in light mode */
+html.light .editor-workspace .bg-\[\#0f0f12\] {
+  background-color: #efece4 !important;
+  border-color: #d7d4ca !important;
+}
+
+/* Modals overlays */
+html.light .editor-workspace .fixed.inset-0.z-50,
+html.light .editor-workspace .fixed.inset-0.bg-neutral-950\/85,
+html.light .editor-workspace .fixed.inset-0.bg-neutral-950\/80 {
+  background-color: rgba(26, 21, 18, 0.45) !important;
+}
+
+/* Keep active indicators clear */
+html.light .editor-workspace .border-indigo-500 {
+  border-color: #4f46e5 !important;
+}
+
+/* Fix mobile nav drawer overlay */
+.mobile-nav-drawer {
+  background-color: #09090b !important;
+  border-color: #1c1917 !important;
+}
+html.light .mobile-nav-drawer {
+  background-color: #fbf9f5 !important;
+  border-color: #e6e3da !important;
+}
+
+/* Fix button text color contrast in light mode (Item 1.5) */
+html.light .bg-indigo-600,
+html.light .bg-indigo-600 *,
+html.light button.bg-indigo-600,
+html.light .emerald-btn,
+html.light .emerald-btn *,
+html.light .primary-btn,
+html.light .primary-btn * {
+  color: #ffffff !important;
+}
