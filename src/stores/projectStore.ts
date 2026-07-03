@@ -12,6 +12,7 @@ interface ProjectStore {
   // Data
   projects: Project[];
   chapters: Chapter[];
+  deletedChapters: Chapter[];
   characters: Character[];
   locations: Location[];
   timelineEvents: TimelineEvent[];
@@ -38,8 +39,11 @@ interface ProjectStore {
   ) => Promise<Chapter>;
   updateChapter: (id: string, updates: Partial<Chapter>) => Promise<void>;
   deleteChapter: (id: string) => Promise<void>;
+  restoreChapter: (id: string) => void;
+  permanentDeleteChapter: (id: string) => Promise<void>;
   getChapter: (id: string) => Chapter | undefined;
   getChaptersByProject: (projectId: string) => Chapter[];
+  getDeletedChaptersByProject: (projectId: string) => Chapter[];
   reorderChapters: (projectId: string, newOrder: string[]) => void;
 
   fetchCharacters: (projectId: string) => Promise<void>;
@@ -249,6 +253,7 @@ export const useProjectStore = create<ProjectStore>()(
       // Initial state with fallback mock values
       projects: initialProjects,
       chapters: initialChapters,
+      deletedChapters: [],
       characters: initialCharacters,
       locations: initialLocations,
       timelineEvents: initialTimeline,
@@ -322,6 +327,7 @@ export const useProjectStore = create<ProjectStore>()(
         set((s) => ({
           projects: s.projects.filter((p) => p.id !== id),
           chapters: s.chapters.filter((c) => c.projectId !== id),
+          deletedChapters: s.deletedChapters.filter((c) => c.projectId !== id),
           characters: s.characters.filter((c) => c.projectId !== id),
           locations: s.locations.filter((l) => l.projectId !== id),
           timelineEvents: s.timelineEvents.filter((e) => e.projectId !== id),
@@ -394,15 +400,39 @@ export const useProjectStore = create<ProjectStore>()(
       },
 
       deleteChapter: async (id) => {
+        // Soft-delete: move to deletedChapters instead of removing
+        const chapter = get().chapters.find((c) => c.id === id);
+        if (!chapter) return;
         await fetch(`/api/chapters/${id}`, { method: "DELETE" });
         set((s) => ({
           chapters: s.chapters.filter((c) => c.id !== id),
+          deletedChapters: [...s.deletedChapters, { ...chapter, deletedAt: new Date() }],
           activeChapterId:
             s.activeChapterId === id ? null : s.activeChapterId,
         }));
       },
 
+      restoreChapter: (id) => {
+        const chapter = get().deletedChapters.find((c) => c.id === id);
+        if (!chapter) return;
+        set((s) => ({
+          deletedChapters: s.deletedChapters.filter((c) => c.id !== id),
+          chapters: [...s.chapters, chapter].sort((a, b) => a.number - b.number),
+        }));
+      },
+
+      permanentDeleteChapter: async (id) => {
+        set((s) => ({
+          deletedChapters: s.deletedChapters.filter((c) => c.id !== id),
+        }));
+      },
+
       getChapter: (id) => get().chapters.find((c) => c.id === id),
+
+      getDeletedChaptersByProject: (projectId) =>
+        get()
+          .deletedChapters.filter((c) => c.projectId === projectId)
+          .sort((a, b) => a.number - b.number),
 
       getChaptersByProject: (projectId) =>
         get()

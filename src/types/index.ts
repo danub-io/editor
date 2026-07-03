@@ -42,6 +42,7 @@ export interface Chapter {
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date;
 }
 
 export interface Character {

@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import AnimatedThemeToggler from '@/registry/magicui/animated-theme-toggler';
 import { 
   Plus, 
   Trash2, 
@@ -165,7 +166,7 @@ const PAGE_TEMPLATES: Record<string, { title: string; content: string }> = {
 
 interface PlanningCard {
   id: string;
-  column: 'planning' | 'ato1' | 'ato2' | 'ato3';
+  column: string;
   title: string;
   content: string;
   tag?: 'Estrutura' | 'Personagem' | 'Trama' | 'Cenário' | 'Geral';
@@ -271,7 +272,22 @@ export default function WorkspaceEditor({
   const [addBoardInlineName, setAddBoardInlineName] = useState('');
 
   // Theme state
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gospelreads_is_dark');
+      return saved !== null ? saved === 'true' : true;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('gospelreads_is_dark', String(isDark));
+  }, [isDark]);
 
   // Trash panel
   const [trashOpen, setTrashOpen] = useState(false);
@@ -281,6 +297,27 @@ export default function WorkspaceEditor({
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
 
   // Load and persist planning cards
+  // Load and persist planning sections (Kanban columns)
+  const [planningSections, setPlanningSections] = useState<{ id: string; name: string }[]>(() => {
+    const saved = localStorage.getItem('gospelreads_planning_sections');
+    return saved ? JSON.parse(saved) : [
+      { id: 'planning', name: 'Planejamento' },
+      { id: 'ato1', name: 'Ato I: Partida' },
+      { id: 'ato2', name: 'Ato II: Iniciação' },
+      { id: 'ato3', name: 'Ato III: Retorno' }
+    ];
+  });
+
+  const [pinnedCardsList, setPinnedCardsList] = useState<string[]>(() => {
+    const saved = localStorage.getItem('gospelreads_pinned_cards_list');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [deletedPlanningCards, setDeletedPlanningCards] = useState<PlanningCard[]>(() => {
+    const saved = localStorage.getItem('gospelreads_deleted_planning_cards');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [planningCards, setPlanningCards] = useState<PlanningCard[]>(() => {
     const saved = localStorage.getItem('gospelreads_planning_cards');
     return saved ? JSON.parse(saved) : [
@@ -337,6 +374,18 @@ export default function WorkspaceEditor({
     { id: 's-2', type: 'repetition', original: 'folha', replacement: 'página', comment: 'Repetição da palavra "folha" em parágrafos adjacentes.' }
   ]);
   const [deletedChapters, setDeletedChapters] = useState<Chapter[]>([]);
+
+  useEffect(() => {
+    localStorage.setItem('gospelreads_planning_sections', JSON.stringify(planningSections));
+  }, [planningSections]);
+
+  useEffect(() => {
+    localStorage.setItem('gospelreads_pinned_cards_list', JSON.stringify(pinnedCardsList));
+  }, [pinnedCardsList]);
+
+  useEffect(() => {
+    localStorage.setItem('gospelreads_deleted_planning_cards', JSON.stringify(deletedPlanningCards));
+  }, [deletedPlanningCards]);
 
   useEffect(() => {
     localStorage.setItem('gospelreads_planning_cards', JSON.stringify(planningCards));
@@ -563,7 +612,7 @@ export default function WorkspaceEditor({
   };
 
   // Planning board helpers
-  const addPlanningCard = (column: 'planning' | 'ato1' | 'ato2' | 'ato3', title?: string, content?: string) => {
+  const addPlanningCard = (column: string, title?: string, content?: string) => {
     const cardTitle = title !== undefined ? title : window.prompt('Digite o título para o seu card de planejamento:') || '';
     if (!cardTitle.trim()) return;
     const cardContent = content !== undefined ? content : window.prompt('Digite uma breve descrição para o card:') || '';
@@ -573,22 +622,71 @@ export default function WorkspaceEditor({
       column,
       title: cardTitle.trim(),
       content: cardContent.trim(),
-      tag: column === 'planning' ? 'Geral' : 'Estrutura'
+      tag: 'Geral'
     };
     setPlanningCards([...planningCards, newCard]);
   };
 
-  const commitAddCard = (column: 'planning' | 'ato1' | 'ato2' | 'ato3') => {
+  const commitAddCard = (column: string) => {
     addPlanningCard(column, addCardTitle, addCardContent);
     setAddCardTitle('');
     setAddCardContent('');
     setAddCardOpenFor(null);
   };
 
-  const deletePlanningCard = (id: string) => {
-    if (window.confirm('Excluir este card de planejamento permanentemente?')) {
-      setPlanningCards(planningCards.filter(c => c.id !== id));
+  // Dynamic Kanban Sections helpers
+  const addPlanningSection = () => {
+    const sectionName = window.prompt("Nome da nova seção:", "Nova Seção");
+    if (sectionName && sectionName.trim()) {
+      const newSection = {
+        id: `sec-${Date.now()}`,
+        name: sectionName.trim()
+      };
+      setPlanningSections(prev => [...prev, newSection]);
     }
+  };
+
+  const deletePlanningSection = (id: string) => {
+    if (planningSections.length <= 1) {
+      alert("Você precisa manter pelo menos uma seção.");
+      return;
+    }
+    if (window.confirm("Deseja realmente excluir esta seção? Todos os cards nela serão movidos para a primeira seção.")) {
+      const firstSectionId = planningSections.find(s => s.id !== id)?.id || planningSections[0].id;
+      setPlanningCards(prev => prev.map(card => card.column === id ? { ...card, column: firstSectionId } : card));
+      setPlanningSections(prev => prev.filter(s => s.id !== id));
+    }
+  };
+
+  const renamePlanningSection = (id: string, currentName: string) => {
+    const newName = window.prompt("Novo nome para a seção:", currentName);
+    if (newName && newName.trim()) {
+      setPlanningSections(prev => prev.map(s => s.id === id ? { ...s, name: newName.trim() } : s));
+    }
+  };
+
+  const togglePinCard = (id: string) => {
+    setPinnedCardsList(prev => {
+      const isPinned = prev.includes(id);
+      if (isPinned) {
+        return prev.filter(item => item !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  const softDeletePlanningCard = (id: string) => {
+    const card = planningCards.find(c => c.id === id);
+    if (card) {
+      setDeletedPlanningCards(prev => [...prev, card]);
+      setPlanningCards(prev => prev.filter(c => c.id !== id));
+      setPinnedCardsList(prev => prev.filter(item => item !== id));
+    }
+  };
+
+  const deletePlanningCard = (id: string) => {
+    softDeletePlanningCard(id);
   };
 
   // World Building / Boards helper functions
@@ -681,7 +779,7 @@ export default function WorkspaceEditor({
     e.dataTransfer.setData('text/plain', cardId);
   };
 
-  const handleDrop = (e: React.DragEvent, column: 'planning' | 'ato1' | 'ato2' | 'ato3') => {
+  const handleDrop = (e: React.DragEvent, column: string) => {
     e.preventDefault();
     const cardId = e.dataTransfer.getData('text/plain');
     if (cardId) {
@@ -862,14 +960,13 @@ export default function WorkspaceEditor({
               <Trash2 size={18} />
             </button>
 
-            {/* Theme toggle */}
-            <button
-              onClick={() => setIsDark(d => !d)}
-              className="p-2 rounded-xl border border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900 transition-all cursor-pointer"
-              title={isDark ? 'Modo Claro' : 'Modo Escuro'}
-            >
-              {isDark ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
+            {/* Theme toggle using AnimatedThemeToggler */}
+            <div className="p-2 rounded-xl">
+              <AnimatedThemeToggler 
+                theme={isDark ? 'dark' : 'light'} 
+                onThemeChange={(newTheme) => setIsDark(newTheme === 'dark')} 
+              />
+            </div>
           </div>
         </aside>
       )}
@@ -1654,236 +1751,109 @@ export default function WorkspaceEditor({
             })()
           ) : (
             /* FULL PAGE KANBAN PLANNING BOARD */
-            <div className="flex-1 overflow-y-auto p-8 bg-[#09090b] text-neutral-200 space-y-8 select-none">
+            <div className="flex-1 overflow-y-auto p-8 bg-[#f5f5f7] dark:bg-[#09090b] text-neutral-800 dark:text-neutral-200 space-y-10 select-none">
               {/* Planning Header */}
-              <div className="flex justify-between items-center border-b border-neutral-900 pb-4 relative">
+              <div className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-900 pb-4">
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">📋</span>
-                  <h2 className="text-xl font-bold font-serif text-white tracking-wide">Planejamento</h2>
+                  <h2 className="text-xl font-bold font-serif text-neutral-900 dark:text-white tracking-wide">Planning</h2>
                 </div>
                 
-                {/* Add Dropdown */}
-                <div className="relative">
-                  <button 
-                    onClick={() => setIsAddDropdownOpen(!isAddDropdownOpen)}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-lg"
-                  >
-                    Add <Plus size={14} />
-                  </button>
-                  {isAddDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-neutral-950 border border-neutral-850 rounded-2xl shadow-2xl py-2 z-50 animate-fade-in text-left">
-                      <button 
-                        onClick={() => { addCardFromTemplate('Blank note'); setIsAddDropdownOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-neutral-300 hover:bg-neutral-900 flex items-center gap-3 cursor-pointer"
-                      >
-                        <span className="text-neutral-500 font-mono">🗒️</span> Blank note
-                      </button>
-                      <button 
-                        onClick={() => { addCardFromTemplate('Folder'); setIsAddDropdownOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-indigo-400 hover:bg-neutral-900 flex items-center gap-3 cursor-pointer"
-                      >
-                        <span className="text-indigo-400 font-mono">📁</span> Folder
-                      </button>
-                      <div className="border-t border-neutral-900 my-1.5" />
-                      <button 
-                        onClick={() => { addCardFromTemplate('Worldbuilding'); setIsAddDropdownOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-neutral-300 hover:bg-neutral-900 flex items-center gap-3 cursor-pointer"
-                      >
-                        <span className="text-emerald-400 font-mono">🗺️</span> Worldbuilding
-                      </button>
-                      <button 
-                        onClick={() => { addCardFromTemplate('Characters'); setIsAddDropdownOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-neutral-300 hover:bg-neutral-900 flex items-center gap-3 cursor-pointer"
-                      >
-                        <span className="text-amber-400 font-mono">👤</span> Characters
-                      </button>
-                      <button 
-                        onClick={() => { addCardFromTemplate('Settings'); setIsAddDropdownOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-neutral-300 hover:bg-neutral-900 flex items-center gap-3 cursor-pointer"
-                      >
-                        <span className="text-indigo-400 font-mono">⚙️</span> Settings
-                      </button>
-                      <button 
-                        onClick={() => { addCardFromTemplate('Narrative devices'); setIsAddDropdownOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-neutral-300 hover:bg-neutral-900 flex items-center gap-3 cursor-pointer"
-                      >
-                        <span className="text-purple-400 font-mono">🖋️</span> Narrative devices
-                      </button>
-                      <button 
-                        onClick={() => { setShowTemplatesModal(true); setIsAddDropdownOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-neutral-400 hover:bg-neutral-900 flex items-center gap-3 cursor-pointer italic"
-                      >
-                        <span className="text-neutral-600 font-mono">📋</span> Browse templates...
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button 
+                  onClick={addPlanningSection}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+                >
+                  Nova Seção <Plus size={14} />
+                </button>
               </div>
 
-              {/* Drag & Drop Lanes Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
-                {/* Lane 1: Planning Geral */}
-                <div 
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, 'planning')}
-                  className="bg-neutral-900/30 border border-neutral-850 p-4 rounded-3xl space-y-4 min-h-[380px]"
-                >
-                  <div className="flex justify-between items-center border-b border-neutral-800 pb-2 select-none">
-                    <span className="text-sm font-bold text-neutral-300 font-serif">Planning</span>
-                    <button 
-                      onClick={() => addPlanningCard('planning')} 
-                      className="text-xs bg-neutral-950 text-indigo-400 border border-neutral-850 px-2 py-1 rounded-lg hover:text-white cursor-pointer font-bold"
-                    >
-                      Add +
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-                    {planningCards.filter(c => c.column === 'planning').map(card => (
-                      <div 
-                        key={card.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, card.id)}
-                        onClick={() => setActivePlanningCardId(card.id)}
-                        className="bg-neutral-950 border border-neutral-850 p-4 rounded-2xl text-sm relative group space-y-2 cursor-grab active:cursor-grabbing hover:border-neutral-750 hover:bg-neutral-900/10 transition-all shadow-md text-left"
-                      >
-                        <div className="font-serif font-bold text-white flex justify-between items-center">
-                          <span>{card.title}</span>
-                          <span className="text-xs text-neutral-500 font-mono">📌</span>
-                        </div>
-                        <p className="text-neutral-400 text-xs leading-relaxed font-sans">{card.content}</p>
-                        <div className="flex justify-between items-center pt-2 border-t border-neutral-850/50 mt-2">
-                          <span className="text-[10px] bg-neutral-900 text-neutral-500 border border-neutral-800 px-2 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Geral'}</span>
-                          <button onClick={(e) => { e.stopPropagation(); deletePlanningCard(card.id); }} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
-                            <Trash2 size={12} />
+              {/* Stacked Rows Layout */}
+              <div className="space-y-8 text-left">
+                {planningSections.map(section => (
+                  <div 
+                    key={section.id}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, section.id)}
+                    className="space-y-4"
+                  >
+                    {/* Lane Header */}
+                    <div className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-850 pb-2">
+                      <div className="flex items-center gap-2 select-none">
+                        <span 
+                          onClick={() => renamePlanningSection(section.id, section.name)}
+                          className="text-lg font-bold text-neutral-800 dark:text-neutral-200 font-serif cursor-pointer hover:text-indigo-600"
+                        >
+                          {section.name}
+                        </span>
+                        {planningSections.length > 1 && (
+                          <button 
+                            onClick={() => deletePlanningSection(section.id)} 
+                            className="text-xs text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                            title="Excluir Seção"
+                          >
+                            <X size={12} />
                           </button>
-                        </div>
+                        )}
                       </div>
-                    ))}
-                    {planningCards.filter(c => c.column === 'planning').length === 0 && (
-                      <div className="text-center py-8 text-neutral-600 text-xs italic font-sans select-none">Sem cards nesta coluna</div>
-                    )}
-                  </div>
-                </div>
+                      
+                      <button 
+                        onClick={() => addPlanningCard(section.id)}
+                        className="bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-850 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-800 text-xs font-bold px-3 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                      >
+                        Add <Plus size={12} />
+                      </button>
+                    </div>
 
-                {/* Lane 2: Act I */}
-                <div 
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, 'ato1')}
-                  className="bg-neutral-900/30 border border-neutral-855 p-4 rounded-3xl space-y-4 min-h-[380px]"
-                >
-                  <div className="flex justify-between items-center border-b border-neutral-800 pb-2 select-none">
-                    <span className="text-sm font-bold text-neutral-300 font-serif">Act I</span>
-                    <button 
-                      onClick={() => addPlanningCard('ato1')} 
-                      className="text-xs bg-neutral-950 text-indigo-400 border border-neutral-850 px-2 py-1 rounded-lg hover:text-white cursor-pointer font-bold"
-                    >
-                      Add +
-                    </button>
+                    {/* Cards horizontal shelf */}
+                    <div className="flex flex-wrap gap-4">
+                      {planningCards.filter(c => c.column === section.id).map(card => {
+                        const isPinned = pinnedCardsList && pinnedCardsList.includes(card.id);
+                        return (
+                          <div 
+                            key={card.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, card.id)}
+                            onClick={() => setActivePlanningCardId(card.id)}
+                            className="w-[245px] bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-4 rounded-xl text-sm relative group space-y-2 cursor-grab active:cursor-grabbing hover:border-neutral-300 dark:hover:border-neutral-750 transition-all shadow-sm text-left flex flex-col justify-between min-h-[135px]"
+                          >
+                            <div>
+                              <div className="flex justify-between items-start gap-2">
+                                <span className="font-serif font-bold text-neutral-850 dark:text-white line-clamp-1">{card.title}</span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button 
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      togglePinCard(card.id); 
+                                    }} 
+                                    className="text-neutral-400 hover:text-indigo-500 cursor-pointer transition-colors"
+                                    title={isPinned ? "Desafixar" : "Fixar nas notas"}
+                                  >
+                                    <Pin size={11} className={isPinned ? "fill-indigo-500 text-indigo-500" : ""} />
+                                  </button>
+                                  <span className="text-neutral-350 dark:text-neutral-700 cursor-grab">⋮⋮</span>
+                                </div>
+                              </div>
+                              <p className="text-neutral-500 dark:text-neutral-400 text-[11px] leading-relaxed font-sans mt-1.5 line-clamp-3">{card.content}</p>
+                            </div>
+                            
+                            <div className="flex justify-between items-center pt-2 border-t border-neutral-100 dark:border-neutral-900 mt-2">
+                              <span className="text-[9px] bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Geral'}</span>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); deletePlanningCard(card.id); }} 
+                                className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity cursor-pointer"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {planningCards.filter(c => c.column === section.id).length === 0 && (
+                        <div className="text-neutral-400 dark:text-neutral-600 text-xs italic font-sans py-2 select-none">Sem cards nesta seção. Clique em "Add +" para criar.</div>
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-3">
-                    {planningCards.filter(c => c.column === 'ato1').map(card => (
-                      <div 
-                        key={card.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, card.id)}
-                        onClick={() => setActivePlanningCardId(card.id)}
-                        className="bg-neutral-950 border border-neutral-850 p-4 rounded-2xl text-sm relative group space-y-2 cursor-grab active:cursor-grabbing hover:border-neutral-750 hover:bg-neutral-900/10 transition-all shadow-md text-left"
-                      >
-                        <div className="font-serif font-bold text-white">{card.title}</div>
-                        <p className="text-neutral-400 text-xs leading-relaxed font-sans">{card.content}</p>
-                        <div className="flex justify-between items-center pt-2 border-t border-neutral-850/50 mt-2">
-                          <span className="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Estrutura'}</span>
-                          <button onClick={(e) => { e.stopPropagation(); deletePlanningCard(card.id); }} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    {planningCards.filter(c => c.column === 'ato1').length === 0 && (
-                      <div className="text-center py-8 text-neutral-600 text-xs italic font-sans select-none">Sem cards nesta coluna</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Lane 3: Act II */}
-                <div 
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, 'ato2')}
-                  className="bg-neutral-900/30 border border-neutral-855 p-4 rounded-3xl space-y-4 min-h-[380px]"
-                >
-                  <div className="flex justify-between items-center border-b border-neutral-800 pb-2 select-none">
-                    <span className="text-sm font-bold text-neutral-300 font-serif">Act II</span>
-                    <button 
-                      onClick={() => addPlanningCard('ato2')} 
-                      className="text-xs bg-neutral-950 text-indigo-400 border border-neutral-850 px-2 py-1 rounded-lg hover:text-white cursor-pointer font-bold"
-                    >
-                      Add +
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-                    {planningCards.filter(c => c.column === 'ato2').map(card => (
-                      <div 
-                        key={card.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, card.id)}
-                        onClick={() => setActivePlanningCardId(card.id)}
-                        className="bg-neutral-950 border border-neutral-850 p-4 rounded-2xl text-sm relative group space-y-2 cursor-grab active:cursor-grabbing hover:border-neutral-755 hover:bg-neutral-900/10 transition-all shadow-md text-left"
-                      >
-                        <div className="font-serif font-bold text-white">{card.title}</div>
-                        <p className="text-neutral-400 text-xs leading-relaxed font-sans">{card.content}</p>
-                        <div className="flex justify-between items-center pt-2 border-t border-neutral-850/50 mt-2">
-                          <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Trama'}</span>
-                          <button onClick={(e) => { e.stopPropagation(); deletePlanningCard(card.id); }} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    {planningCards.filter(c => c.column === 'ato2').length === 0 && (
-                      <div className="text-center py-8 text-neutral-600 text-xs italic font-sans select-none">Sem cards nesta coluna</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Lane 4: Act III */}
-                <div 
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, 'ato3')}
-                  className="bg-neutral-900/30 border border-neutral-855 p-4 rounded-3xl space-y-4 min-h-[380px]"
-                >
-                  <div className="flex justify-between items-center border-b border-neutral-800 pb-2 select-none">
-                    <span className="text-sm font-bold text-neutral-300 font-serif">Act III</span>
-                    <button 
-                      onClick={() => addPlanningCard('ato3')} 
-                      className="text-xs bg-neutral-950 text-indigo-400 border border-neutral-850 px-2 py-1 rounded-lg hover:text-white cursor-pointer font-bold"
-                    >
-                      Add +
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-                    {planningCards.filter(c => c.column === 'ato3').map(card => (
-                      <div 
-                        key={card.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, card.id)}
-                        onClick={() => setActivePlanningCardId(card.id)}
-                        className="bg-neutral-950 border border-neutral-855 p-4 rounded-2xl text-sm relative group space-y-2 cursor-grab active:cursor-grabbing hover:border-neutral-750 hover:bg-neutral-900/10 transition-all shadow-md text-left"
-                      >
-                        <div className="font-serif font-bold text-white">{card.title}</div>
-                        <p className="text-neutral-400 text-xs leading-relaxed font-sans">{card.content}</p>
-                        <div className="flex justify-between items-center pt-2 border-t border-neutral-850/50 mt-2">
-                          <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Clímax'}</span>
-                          <button onClick={(e) => { e.stopPropagation(); deletePlanningCard(card.id); }} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    {planningCards.filter(c => c.column === 'ato3').length === 0 && (
-                      <div className="text-center py-8 text-neutral-600 text-xs italic font-sans select-none">Sem cards nesta coluna</div>
-                    )}
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           )
@@ -1941,7 +1911,7 @@ export default function WorkspaceEditor({
         <div className="flex shrink-0 select-none">
           {/* Collapse drawer content panel */}
           {activeRightTool && (
-            <aside className="w-80 border-l border-neutral-900 bg-[#0c0c0e] flex flex-col justify-between overflow-y-auto animate-fade-in">
+            <aside className="w-80 border-l border-neutral-200 dark:border-neutral-900 bg-[#f5f3ef] dark:bg-[#0c0c0e] flex flex-col justify-between overflow-hidden animate-fade-in">
               <div className="p-5 space-y-6 h-full flex flex-col justify-start">
                 
                 {/* Tool title header */}
@@ -2074,16 +2044,81 @@ export default function WorkspaceEditor({
 
                 {/* TAB CONTENT: Pinned Notes */}
                 {activeRightTool === 'notes' && (
-                  <div className="space-y-4 flex-1 overflow-y-auto text-neutral-300 flex flex-col justify-start h-full">
-                    <p className="text-xs text-neutral-400 leading-relaxed">Use este rascunho de anotações rápidas sobre personagens ou enredo.</p>
-                    <textarea
-                      value={pinnedNotes}
-                      onChange={(e) => setPinnedNotes(e.target.value)}
-                      rows={14}
-                      className="w-full border border-neutral-850 bg-neutral-950 text-white p-3.5 text-xs rounded-2xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-sans leading-relaxed"
-                    />
-                    <div className="text-[10px] text-neutral-500 italic flex items-center gap-1">
-                      <Info size={11} className="text-indigo-400 shrink-0" /> Salvo localmente em tempo real.
+                  <div className="space-y-4 flex-1 overflow-y-auto text-neutral-700 dark:text-neutral-300 flex flex-col justify-start h-full pr-1">
+                    <p className="text-xs text-neutral-400 leading-relaxed text-left">
+                      Cards fixados ou criados diretamente aqui. As alterações de texto salvam automaticamente.
+                    </p>
+
+                    {/* Create New Card Form */}
+                    <div className="bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 text-left">
+                      <div className="text-[10px] font-bold text-neutral-400 uppercase">Criar Nota Fixada</div>
+                      <input 
+                        type="text"
+                        id="new-note-title"
+                        placeholder="Título da nota..."
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-800 dark:text-white focus:outline-none"
+                      />
+                      <textarea
+                        id="new-note-content"
+                        placeholder="Descrição da nota..."
+                        rows={3}
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-800 dark:text-white focus:outline-none resize-none"
+                      />
+                      <button
+                        onClick={() => {
+                          const titleEl = document.getElementById('new-note-title') as HTMLInputElement;
+                          const contentEl = document.getElementById('new-note-content') as HTMLTextAreaElement;
+                          if (titleEl && titleEl.value.trim()) {
+                            const newId = `pc-${Date.now()}`;
+                            const newCard = {
+                              id: newId,
+                              column: planningSections[0]?.id || 'planning',
+                              title: titleEl.value.trim(),
+                              content: contentEl.value.trim() || 'Sem descrição.',
+                              tag: 'Geral' as const
+                            };
+                            setPlanningCards(prev => [...prev, newCard]);
+                            setPinnedCardsList(prev => [...prev, newId]);
+                            titleEl.value = '';
+                            contentEl.value = '';
+                          }
+                        }}
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-xl transition-all cursor-pointer"
+                      >
+                        Adicionar Nota
+                      </button>
+                    </div>
+
+                    {/* Notes List */}
+                    <div className="space-y-3 mt-2 text-left">
+                      {planningCards.filter(c => pinnedCardsList.includes(c.id)).map(card => (
+                        <div key={card.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 relative group shadow-sm">
+                          <div className="font-serif font-bold text-neutral-900 dark:text-white flex justify-between items-center">
+                            <input
+                              type="text"
+                              value={card.title}
+                              onChange={(e) => setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, title: e.target.value } : c))}
+                              className="bg-transparent border-none p-0 font-bold text-neutral-900 dark:text-white focus:outline-none w-full mr-2"
+                            />
+                            <button 
+                              onClick={() => togglePinCard(card.id)}
+                              className="text-indigo-500 hover:text-neutral-500"
+                              title="Desafixar"
+                            >
+                              <Pin size={12} className="fill-indigo-500 rotate-45" />
+                            </button>
+                          </div>
+                          <textarea
+                            value={card.content}
+                            rows={3}
+                            onChange={(e) => setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, content: e.target.value } : c))}
+                            className="w-full bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-850 rounded-xl p-2 text-[11px] text-neutral-600 dark:text-neutral-300 focus:outline-none resize-none leading-relaxed"
+                          />
+                        </div>
+                      ))}
+                      {planningCards.filter(c => pinnedCardsList.includes(c.id)).length === 0 && (
+                        <div className="text-center py-8 text-neutral-600 dark:text-neutral-600 text-xs italic font-sans">Nenhum card fixado.</div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2853,6 +2888,109 @@ export default function WorkspaceEditor({
           </div>
         </div>
       )}
+      {/* MODAL 7: LIXEIRA GERAL MODAL */}
+      {trashOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
+          <div className="bg-white dark:bg-[#09090b] border border-neutral-200 dark:border-neutral-850 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl relative animate-fade-in">
+            {/* Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-neutral-200 dark:border-neutral-900 select-none">
+              <span className="font-serif font-bold text-base text-neutral-900 dark:text-white flex items-center gap-2">
+                <Trash2 size={18} className="text-red-500" /> Lixeira Geral
+              </span>
+              <button 
+                onClick={() => setTrashOpen(false)}
+                className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-850 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
+              {/* Deleted Chapters / Pages */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Capítulos & Páginas Deletados</h3>
+                {deletedChapters.length === 0 ? (
+                  <p className="text-xs text-neutral-400 italic">Nenhum capítulo na lixeira.</p>
+                ) : (
+                  <div className="divide-y divide-neutral-100 dark:divide-neutral-900">
+                    {deletedChapters.map(chap => (
+                      <div key={chap.id} className="py-2.5 flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">{chap.title}</span>
+                          <span className="text-[10px] text-neutral-400 dark:text-neutral-500 block">Tipo: Capítulo • Ordem: {chap.order}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => {
+                              setChapters(prev => [...prev, chap].sort((a, b) => a.order - b.order));
+                              setDeletedChapters(prev => prev.filter(c => c.id !== chap.id));
+                            }}
+                            className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold px-2.5 py-1 rounded"
+                          >
+                            Restaurar
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (window.confirm("Excluir permanentemente?")) {
+                                setDeletedChapters(prev => prev.filter(c => c.id !== chap.id));
+                              }
+                            }}
+                            className="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-bold px-2.5 py-1 rounded"
+                          >
+                            Excluir Definitivo
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Deleted Planning Cards */}
+              <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-900">
+                <h3 className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Cards de Planejamento Deletados</h3>
+                {deletedPlanningCards.length === 0 ? (
+                  <p className="text-xs text-neutral-400 italic">Nenhum card na lixeira.</p>
+                ) : (
+                  <div className="divide-y divide-neutral-100 dark:divide-neutral-900">
+                    {deletedPlanningCards.map(card => (
+                      <div key={card.id} className="py-2.5 flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">{card.title}</span>
+                          <p className="text-[10px] text-neutral-500 truncate max-w-sm">{card.content}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => {
+                              setPlanningCards(prev => [...prev, card]);
+                              setDeletedPlanningCards(prev => prev.filter(c => c.id !== card.id));
+                            }}
+                            className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold px-2.5 py-1 rounded"
+                          >
+                            Restaurar
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (window.confirm("Excluir card permanentemente?")) {
+                                setDeletedPlanningCards(prev => prev.filter(c => c.id !== card.id));
+                              }
+                            }}
+                            className="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-bold px-2.5 py-1 rounded"
+                          >
+                            Excluir Definitivo
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

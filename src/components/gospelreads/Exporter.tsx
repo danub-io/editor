@@ -295,6 +295,32 @@ export default function Exporter({ chapters, settings, setSettings }: ExporterPr
                   className="rounded border-neutral-800 text-indigo-500 bg-neutral-950 focus:ring-indigo-500 focus:ring-offset-0 w-4 h-4 cursor-pointer"
                 />
               </div>
+
+              <div className="flex items-center justify-between border-t border-neutral-805/40 pt-3">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-300 block">Salvamento Automático</label>
+                  <p className="text-[10px] text-neutral-500">Persistir rascunhos no banco de dados local</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={true}
+                  readOnly
+                  className="rounded border-neutral-800 text-indigo-500 bg-neutral-950 opacity-60 w-4 h-4 cursor-not-allowed"
+                />
+              </div>
+
+              <div className="flex items-center justify-between border-t border-neutral-805/40 pt-3">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-300 block">Assistente de Co-autoria</label>
+                  <p className="text-[10px] text-neutral-500">Habilitar revisões gramaticais inteligentes</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={true}
+                  readOnly
+                  className="rounded border-neutral-800 text-indigo-500 bg-neutral-950 opacity-60 w-4 h-4 cursor-not-allowed"
+                />
+              </div>
             </div>
           </div>
 

@@ -2,10 +2,11 @@
 
 export const runtime = "edge";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useProjectStore } from "@/stores/projectStore";
 import { Sidebar, MobileSidebar } from "@/components/sidebar/Sidebar";
+import { GlobalSearch } from "@/components/search/GlobalSearch";
 import {
   Sheet,
   SheetTrigger,
@@ -37,6 +38,15 @@ export default function ProjectLayout({
   } = useProjectStore();
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Global search state
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenSearch = () => setGlobalSearchOpen(true);
+    window.addEventListener("open-global-search", handleOpenSearch);
+    return () => window.removeEventListener("open-global-search", handleOpenSearch);
+  }, []);
 
   const project = projects.find((p) => p.id === id);
 
@@ -134,6 +144,8 @@ export default function ProjectLayout({
           {children}
         </main>
       </div>
+      {/* Global Search Modal */}
+      <GlobalSearch isOpen={globalSearchOpen} onClose={() => setGlobalSearchOpen(false)} />
     </div>
   );
 }

@@ -26,6 +26,8 @@ import {
   Settings,
   Sun,
   Moon,
+  Search,
+  Trash2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -54,7 +56,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
     getChaptersByProject,
   } = useProjectStore();
 
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   const pathname = usePathname();
@@ -148,7 +150,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
 
   const isActive = (path: string) => pathname === path;
 
-  const ThemeIcon = mounted ? (theme === "dark" ? Sun : Moon) : null;
+  const ThemeIcon = mounted ? (resolvedTheme === "dark" ? Sun : Moon) : null;
 
   return (
     <>
@@ -326,13 +328,31 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
               href={`/projects/${activeProjectId}/settings`}
               active={isActive(`/projects/${activeProjectId}/settings`)}
             />
+            {/* Search button */}
+            <button
+              onClick={() => {
+                const event = new CustomEvent("open-global-search");
+                window.dispatchEvent(event);
+              }}
+              className="flex items-center gap-2.5 px-3 py-1.5 rounded text-[13px] text-sidebar-fg/70 hover:text-sidebar-fg hover:bg-sidebar-muted transition-colors w-full"
+            >
+              <Search className="h-3.5 w-3.5 shrink-0 text-sidebar-fg/40" />
+              Pesquisar
+            </button>
+            {/* Lixeira */}
+            <FooterNavItem
+              icon={Trash2}
+              label="Lixeira"
+              href={`/projects/${activeProjectId}/lixeira`}
+              active={isActive(`/projects/${activeProjectId}/lixeira`)}
+            />
             {/* Theme toggle */}
             <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
               className="flex items-center gap-2.5 px-3 py-1.5 rounded text-[13px] text-sidebar-fg/70 hover:text-sidebar-fg hover:bg-sidebar-muted transition-colors w-full"
             >
               {ThemeIcon ? <ThemeIcon className="h-3.5 w-3.5 shrink-0 text-sidebar-fg/40" /> : <span className="h-3.5 w-3.5 shrink-0" />}
-              {mounted ? (theme === "dark" ? "Tema Claro" : "Tema Escuro") : "Tema"}
+              {mounted ? (resolvedTheme === "dark" ? "Tema Claro" : "Tema Escuro") : "Tema"}
             </button>
           </div>
         </div>
