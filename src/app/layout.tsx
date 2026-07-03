@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
@@ -8,12 +8,6 @@ import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-serif",
-  weight: ["400", "600", "700"],
-  style: ["normal", "italic"],
-});
 
 export const metadata: Metadata = {
   title: "GospelReads - Editor",
@@ -32,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
       <body
-        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-background text-foreground min-h-screen`}
+        className={`${inter.variable} font-sans antialiased bg-background text-foreground min-h-screen`}
       >
       <a
         href="#main-content"

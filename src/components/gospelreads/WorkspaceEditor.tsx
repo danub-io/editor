@@ -1599,19 +1599,19 @@ export default function WorkspaceEditor({
               }
               const colLabel = card.column === 'planning' ? 'Planning' : card.column === 'ato1' ? 'Act I' : card.column === 'ato2' ? 'Act II' : 'Act III';
               return (
-                <div className="flex-1 overflow-y-auto p-8 bg-white text-neutral-800 space-y-6 select-none font-sans">
+                <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-[#0a0a0f] text-neutral-800 dark:text-neutral-200 space-y-6 select-none font-sans">
                   {/* Top breadcrumbs and actions bar */}
-                  <div className="flex justify-between items-center border-b border-neutral-200 pb-3">
-                    <div className="flex items-center gap-2 text-xs text-neutral-500 font-medium select-none">
-                      <span className="cursor-pointer hover:text-indigo-600 flex items-center gap-1" onClick={() => setActivePlanningCardId(null)}>
+                  <div className="flex justify-between items-center border-b border-neutral-200 dark:border-indigo-950/40 pb-3">
+                    <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-450 font-medium select-none">
+                      <span className="cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1" onClick={() => setActivePlanningCardId(null)}>
                         📋 Planning
                       </span>
                       <span>&gt;</span>
-                      <span className="flex items-center gap-1 font-semibold text-neutral-600">
+                      <span className="flex items-center gap-1 font-semibold text-neutral-600 dark:text-neutral-450">
                         📁 {colLabel}
                       </span>
                       <span>&gt;</span>
-                      <span className="text-neutral-800 font-bold">{card.title}</span>
+                      <span className="text-neutral-800 dark:text-white font-bold">{card.title}</span>
                     </div>
 
                     <div className="flex items-center gap-2 select-none">
@@ -1621,7 +1621,7 @@ export default function WorkspaceEditor({
                           setPlanningCards(prev => [...prev, clone]);
                           alert('Card duplicado!');
                         }}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-neutral-300 rounded-lg hover:bg-neutral-100 text-neutral-600 cursor-pointer font-semibold"
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-neutral-300 dark:border-neutral-800 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400 cursor-pointer font-semibold"
                       >
                         <Copy size={12} /> Duplicate
                       </button>
@@ -1630,7 +1630,7 @@ export default function WorkspaceEditor({
                           const nextCol = card.column === 'planning' ? 'ato1' : card.column === 'ato1' ? 'ato2' : card.column === 'ato2' ? 'ato3' : 'planning';
                           setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, column: nextCol } : c));
                         }}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-neutral-300 rounded-lg hover:bg-neutral-100 text-neutral-600 cursor-pointer font-semibold"
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-neutral-300 dark:border-neutral-800 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400 cursor-pointer font-semibold"
                       >
                         <Move size={12} /> Move
                       </button>
@@ -1641,7 +1641,7 @@ export default function WorkspaceEditor({
                             setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, tag: newTag as any } : c));
                           }
                         }}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-neutral-300 rounded-lg hover:bg-neutral-100 text-neutral-600 cursor-pointer font-semibold"
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-neutral-300 dark:border-neutral-800 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400 cursor-pointer font-semibold"
                       >
                         <Pin size={12} /> Pin note
                       </button>
@@ -1652,7 +1652,7 @@ export default function WorkspaceEditor({
                             setActivePlanningCardId(null);
                           }
                         }}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-red-200 text-red-600 rounded-lg hover:bg-red-50 cursor-pointer font-semibold"
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-red-200 dark:border-red-950/40 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer font-semibold"
                       >
                         <Trash2 size={12} /> Delete
                       </button>

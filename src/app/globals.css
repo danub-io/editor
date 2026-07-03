@@ -55,6 +55,11 @@
   --color-neutral-secondary-soft: var(--neutral-secondary-soft);
   --color-neutral-tertiary-medium: var(--neutral-tertiary-medium);
   --color-neutral-tertiary: var(--neutral-tertiary);
+  --color-neutral-750: var(--neutral-750);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-850: var(--neutral-850);
+  --color-neutral-900: var(--neutral-900);
+  --color-neutral-950: var(--neutral-950);
   --color-brand: var(--brand-color);
   --color-brand-strong: var(--brand-strong);
   --color-brand-medium: var(--brand-medium);
@@ -77,6 +82,7 @@
      ================================================================= */
   --color-background: var(--surface);
   --color-foreground: var(--on-surface);
+  --color-on-background: var(--on-surface);
   --color-card: var(--surface-container-lowest);
   --color-card-foreground: var(--on-surface);
   --color-popover: var(--surface-container-lowest);
@@ -99,6 +105,7 @@
      ================================================================= */
   --color-sidebar: var(--surface);
   --color-sidebar-foreground: var(--on-surface);
+  --color-sidebar-fg: var(--on-surface);
   --color-sidebar-muted: var(--surface-container);
   --color-sidebar-border: var(--outline-variant);
   --color-sidebar-accent: var(--surface-container-high);
@@ -152,7 +159,7 @@
 
   --font-size-headline-md: 24px;
 
-  --font-size-body-lg: 20px;
+  --font-size-body-lg: 18px;
   --font-size-body-lg--line-height: 1.6;
   --font-size-body-lg--font-weight: 400;
 
@@ -170,17 +177,16 @@
   --font-size-label-md--letter-spacing: 0.05em;
   --font-size-label-md--font-weight: 500;
 
-  --font-size-caption: 11px;
+  --font-size-caption: 12px;
   --font-size-caption--line-height: 1.4;
   --font-size-caption--font-weight: 400;
 
   /* =================================================================
      Spacing tokens
      ================================================================= */
+  --spacing-container-max: 1280px;
   --spacing-section-gap: 80px;
   --spacing-gutter: 24px;
-  --spacing-container-max: 1280px;
-  --spacing-stack-unit: 8px;
   --spacing-edge-margin-desktop: 40px;
   --spacing-edge-margin-mobile: 20px;
 
@@ -221,8 +227,8 @@
   --inverse-primary: #c8c6c5;
 
   /* Outline */
-  --outline: #747878;
-  --outline-variant: #c4c7c7;
+  --outline: #5c6060;
+  --outline-variant: #858989;
 
   /* Surface tint */
   --surface-tint: #5f5e5e;
@@ -277,6 +283,11 @@
   --neutral-secondary-soft: #f3f4f6;
   --neutral-tertiary-medium: #e5e7eb;
   --neutral-tertiary: #f3f4f6;
+  --neutral-750: #e5e2d9;
+  --neutral-800: #e5e2d9;
+  --neutral-850: #e5e2d9;
+  --neutral-900: #f4f3ef;
+  --neutral-950: #f6f5f0;
   --brand-color: #4f46e5;
   --brand-strong: #4338ca;
   --brand-medium: rgba(99, 102, 241, 0.5);
@@ -284,8 +295,7 @@
   --danger-soft: #fde8e8;
   --warning-soft: #fdf6b2;
   --text-heading: #111827;
-  --text-body: #4b5563;
-  --text-body-subtle: #9ca3af;
+  --text-body-subtle: #6b7280;
   --fg-brand: #4f46e5;
   --fg-success: #03543f;
   --fg-danger: #9b1c1c;
@@ -300,14 +310,14 @@
    ================================================================= */
 .dark {
   /* Surface hierarchy */
-  --surface: #111111;
-  --surface-dim: #0a0a0a;
-  --surface-bright: #1a1a1a;
-  --surface-container-lowest: #0d0d0d;
-  --surface-container-low: #111111;
-  --surface-container: #151515;
-  --surface-container-high: #1a1a1a;
-  --surface-container-highest: #1f1f1f;
+  --surface: #0a0a0f;
+  --surface-dim: #06060a;
+  --surface-bright: #12121b;
+  --surface-container-lowest: #08080c;
+  --surface-container-low: #0a0a0f;
+  --surface-container: #0f0f18;
+  --surface-container-high: #12121b;
+  --surface-container-highest: #171724;
 
   /* On-surface */
   --on-surface: #F7F7F5;
@@ -315,26 +325,26 @@
 
   /* Inverse */
   --inverse-surface: #F7F7F5;
-  --inverse-on-surface: #111111;
+  --inverse-on-surface: #0a0a0f;
   --inverse-primary: #5f5e5e;
 
   /* Outline */
-  --outline: #666666;
-  --outline-variant: #333333;
+  --outline: #7a7a9e;
+  --outline-variant: #5a5a98;
 
   /* Surface tint */
   --surface-tint: #999999;
 
   /* Primary container */
-  --primary-container: #333333;
+  --primary-container: #1a1a2a;
   --on-primary-container: #cccccc;
 
   /* Secondary container */
-  --secondary-container: #222222;
+  --secondary-container: #12121c;
   --on-secondary-container: #999999;
 
   /* Tertiary container */
-  --tertiary-container: #222222;
+  --tertiary-container: #12121c;
   --on-tertiary-container: #999999;
 
   /* Error container */
@@ -342,39 +352,44 @@
   --on-error-container: #ffdad6;
 
   /* Primary fixed */
-  --primary-fixed: #333333;
-  --primary-fixed-dim: #222222;
+  --primary-fixed: #1a1a2a;
+  --primary-fixed-dim: #12121c;
   --on-primary-fixed: #F7F7F5;
   --on-primary-fixed-variant: #cccccc;
 
   /* Secondary fixed */
-  --secondary-fixed: #222222;
-  --secondary-fixed-dim: #1a1a1a;
+  --secondary-fixed: #12121c;
+  --secondary-fixed-dim: #0a0a0f;
   --on-secondary-fixed: #F7F7F5;
   --on-secondary-fixed-variant: #cccccc;
 
   /* Tertiary fixed */
-  --tertiary-fixed: #222222;
-  --tertiary-fixed-dim: #1a1a1a;
+  --tertiary-fixed: #12121c;
+  --tertiary-fixed-dim: #0a0a0f;
   --on-tertiary-fixed: #F7F7F5;
   --on-tertiary-fixed-variant: #cccccc;
 
   /* shadcn aliases */
   --primary: #F7F7F5;
-  --primary-fg: #111111;
-  --secondary: #4a4a4a;
+  --primary-fg: #0a0a0f;
+  --secondary: #4a4a5a;
   --secondary-fg: #F7F7F5;
   --destructive: #ff6b6b;
   --input: transparent;
   --radius: 0;
 
   /* Flowbite Theme Variables */
-  --neutral-primary: #09090b;
-  --neutral-primary-medium: #18181b;
-  --neutral-primary-soft: #27272a;
-  --neutral-secondary-soft: #18181b;
-  --neutral-tertiary-medium: #27272a;
-  --neutral-tertiary: #3f3f46;
+  --neutral-primary: #09090e;
+  --neutral-primary-medium: #111119;
+  --neutral-primary-soft: #171724;
+  --neutral-secondary-soft: #111119;
+  --neutral-tertiary-medium: #171724;
+  --neutral-tertiary: #1c1c2b;
+  --neutral-750: #1a1a2b;
+  --neutral-800: #141422;
+  --neutral-850: #11111b;
+  --neutral-900: #0a0a0f;
+  --neutral-950: #07070a;
   --brand-color: #6366f1;
   --brand-strong: #4f46e5;
   --brand-medium: rgba(99, 102, 241, 0.3);
@@ -382,14 +397,13 @@
   --danger-soft: rgba(239, 68, 68, 0.1);
   --warning-soft: rgba(245, 158, 11, 0.1);
   --text-heading: #f4f4f5;
-  --text-body: #a1a1aa;
-  --text-body-subtle: #71717a;
+  --text-body-subtle: #a1a1aa;
   --fg-brand: #818cf8;
   --fg-success: #34d399;
   --fg-danger: #f87171;
   --fg-warning: #fbbf24;
-  --border-default: #27272a;
-  --border-default-medium: #3f3f46;
+  --border-default: #171724;
+  --border-default-medium: #1c1c2b;
   --rounded-base: 0.5rem;
 }
 
@@ -569,26 +583,26 @@
 /* LIGHT THEME STYLING OVERRIDES - Scoped to the editor workspace to keep LP unaffected */
 html.light .editor-workspace {
   color-scheme: light;
-  background-color: #f4f3ef !important;
-  color: #1a1512 !important;
+  background-color: var(--surface-container-low) !important;
+  color: var(--on-surface) !important;
 }
 
 /* Central canvas background wrapper: warm, comfortable grey-beige */
 html.light .editor-workspace .bg-\[\#09090b\] {
-  background-color: #f4f3ef !important;
-  color: #1a1512 !important;
+  background-color: var(--surface-container-low) !important;
+  color: var(--on-surface) !important;
 }
 
 /* Main editor paper sheet: clean white to stand out and look like a physical paper page */
 html.light .editor-workspace .bg-neutral-900 {
-  background-color: #ffffff !important;
-  color: #1a1512 !important;
+  background-color: var(--surface-container-lowest) !important;
+  color: var(--on-surface) !important;
 }
 
 /* Inset boxes, inputs and detail cards */
 html.light .editor-workspace .bg-neutral-950 {
-  background-color: #f6f5f0 !important;
-  color: #1a1512 !important;
+  background-color: var(--surface-container-low) !important;
+  color: var(--on-surface) !important;
 }
 
 /* Soft secondary backgrounds for highlights and specific cards */
@@ -598,39 +612,39 @@ html.light .editor-workspace .bg-neutral-950\/20,
 html.light .editor-workspace .bg-neutral-900\/20,
 html.light .editor-workspace .bg-neutral-950\/60,
 html.light .editor-workspace .bg-\[\#0c0c0e\] {
-  background-color: #efece4 !important;
+  background-color: var(--surface-container) !important;
 }
 
 /* Soft grey backgrounds for neutral components */
 html.light .editor-workspace .bg-neutral-800,
 html.light .editor-workspace .bg-neutral-850,
 html.light .editor-workspace .bg-neutral-750 {
-  background-color: #e5e2d9 !important;
+  background-color: var(--surface-container-high) !important;
 }
 
 /* Text overrides for light mode */
 html.light .editor-workspace .text-neutral-100 {
-  color: #1a1512 !important;
+  color: var(--on-surface) !important;
 }
 html.light .editor-workspace .text-neutral-200 {
-  color: #2c2421 !important;
+  color: var(--on-surface) !important;
 }
 html.light .editor-workspace .text-neutral-300 {
-  color: #4a423e !important;
+  color: var(--on-surface) !important;
 }
 html.light .editor-workspace .text-neutral-400,
 html.light .editor-workspace .text-zinc-400,
 html.light .editor-workspace .text-gray-400 {
-  color: #706a60 !important;
+  color: var(--on-surface-variant) !important;
 }
 html.light .editor-workspace .text-neutral-500,
 html.light .editor-workspace .text-gray-500 {
-  color: #7c786e !important;
+  color: var(--on-surface-variant) !important;
 }
 
 /* Standard white text in dark mode becomes dark neutral in light mode */
 html.light .editor-workspace .text-white {
-  color: #1a1512 !important;
+  color: var(--on-surface) !important;
 }
 
 /* Border overrides - soft warm border tones */
@@ -642,72 +656,72 @@ html.light .editor-workspace .border-neutral-700,
 html.light .editor-workspace .border-neutral-700\/50,
 html.light .editor-workspace .border-neutral-850\/50,
 html.light .editor-workspace hr {
-  border-color: #e6e3da !important;
+  border-color: var(--outline-variant) !important;
 }
 
 /* Input fields and interactive controls */
 html.light .editor-workspace input,
 html.light .editor-workspace textarea,
 html.light .editor-workspace select {
-  background-color: #ffffff !important;
-  color: #1a1512 !important;
-  border-color: #d7d4ca !important;
+  background-color: var(--surface-container-lowest) !important;
+  color: var(--on-surface) !important;
+  border-color: var(--outline-variant) !important;
 }
 
 html.light .editor-workspace input:focus,
 html.light .editor-workspace textarea:focus,
 html.light .editor-workspace select:focus {
-  border-color: #6366f1 !important;
+  border-color: var(--brand-color) !important;
   outline: none;
 }
 
 html.light .editor-workspace input::placeholder,
 html.light .editor-workspace textarea::placeholder {
-  color: #a49f95 !important;
+  color: #6b665f !important;
 }
 
 /* Primary/secondary text accents */
 html.light .editor-workspace .text-indigo-300,
 html.light .editor-workspace .text-indigo-400,
 html.light .editor-workspace .text-indigo-500 {
-  color: #4f46e5 !important;
+  color: var(--brand-strong) !important;
 }
 
 html.light .editor-workspace .bg-indigo-500\/10,
 html.light .editor-workspace .bg-indigo-500\/15,
 html.light .editor-workspace .bg-indigo-500\/5 {
   background-color: rgba(79, 70, 229, 0.08) !important;
-  color: #4f46e5 !important;
+  color: var(--brand-strong) !important;
 }
 
 html.light .editor-workspace .hover\:bg-neutral-900:hover,
 html.light .editor-workspace .hover\:bg-neutral-950:hover,
 html.light .editor-workspace .hover\:bg-neutral-800:hover {
-  background-color: #f0ede5 !important;
-  color: #1a1512 !important;
+  background-color: var(--surface-container-high) !important;
+  color: var(--on-surface) !important;
 }
 
 html.light .editor-workspace .bg-neutral-900\/40 {
-  background-color: #f0ede5 !important;
+  background-color: var(--surface-container-high) !important;
 }
 
 
 /* Daily goal widget override in light mode */
 html.light .editor-workspace .bg-\[\#0f0f12\] {
-  background-color: #efece4 !important;
-  border-color: #d7d4ca !important;
+  background-color: var(--surface-container) !important;
+  border-color: var(--outline-variant) !important;
 }
 
 /* Modals overlays */
 html.light .editor-workspace .fixed.inset-0.z-50,
 html.light .editor-workspace .fixed.inset-0.bg-neutral-950\/85,
 html.light .editor-workspace .fixed.inset-0.bg-neutral-950\/80 {
-  background-color: rgba(26, 21, 18, 0.45) !important;
+  background-color: rgba(0, 0, 0, 0.45) !important;
 }
 
 /* Keep active indicators clear */
 html.light .editor-workspace .border-indigo-500 {
-  border-color: #4f46e5 !important;
+  border-color: var(--brand-strong) !important;
 }
 
 /* Fix mobile nav drawer overlay */
