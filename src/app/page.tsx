@@ -100,7 +100,7 @@ function DashContent() {
   }, [settings, mounted]);
 
   if (!mounted) {
-    return <div className="min-h-screen bg-[#09090b]"></div>;
+    return <div className="min-h-screen bg-surface dark:bg-[#09090b]"></div>;
   }
 
   return (

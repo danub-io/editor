@@ -215,7 +215,7 @@ export default function Exporter({ chapters, settings, setSettings }: ExporterPr
   };
 
   return (
-    <div className="w-full bg-[#09090b] min-h-[calc(100vh-4rem)] p-6 md:p-12 border-t border-neutral-900">
+    <div className="w-full bg-surface dark:bg-[#09090b] min-h-[calc(100vh-4rem)] p-6 md:p-12 border-t border-neutral-900">
       <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-8 lg:gap-12">
         
         {/* Left Side: Formatter Settings & Exporter Controls */}
@@ -365,7 +365,7 @@ export default function Exporter({ chapters, settings, setSettings }: ExporterPr
           </div>
 
           {/* Page Canvas Container */}
-          <div className="bg-[#0f0f11] p-10 md:p-14 border border-neutral-800 rounded-3xl w-full flex items-center justify-center overflow-x-auto">
+          <div className="bg-surface-container dark:bg-[#0f0f11] p-10 md:p-14 border border-neutral-800 rounded-3xl w-full flex items-center justify-center overflow-x-auto">
             {/* The Sheet Paper itself */}
             <div className={`bg-[#fcfbf9] text-neutral-900 border border-neutral-800 shadow-2xl transition-all duration-300 flex flex-col justify-between rounded-md ${getPaperSizeStyle()} ${getMarginStyle()}`}>
               

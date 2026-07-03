@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useTheme } from 'next-themes';
 import AnimatedThemeToggler from '@/registry/magicui/animated-theme-toggler';
 import { 
   Plus, 
@@ -271,23 +272,10 @@ export default function WorkspaceEditor({
   const [addBoardInlineOpen, setAddBoardInlineOpen] = useState(false);
   const [addBoardInlineName, setAddBoardInlineName] = useState('');
 
-  // Theme state
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('gospelreads_is_dark');
-      return saved !== null ? saved === 'true' : true;
-    }
-    return true;
-  });
+  // Theme — unified via next-themes
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('gospelreads_is_dark', String(isDark));
-  }, [isDark]);
 
   // Trash panel
   const [trashOpen, setTrashOpen] = useState(false);
@@ -964,7 +952,7 @@ export default function WorkspaceEditor({
             <div className="p-2 rounded-xl">
               <AnimatedThemeToggler 
                 theme={isDark ? 'dark' : 'light'} 
-                onThemeChange={(newTheme) => setIsDark(newTheme === 'dark')} 
+                onThemeChange={(newTheme) => setTheme(newTheme)} 
               />
             </div>
           </div>

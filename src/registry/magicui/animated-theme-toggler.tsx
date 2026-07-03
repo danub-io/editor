@@ -189,10 +189,10 @@ export const AnimatedThemeToggler = ({
 
     const applyTheme = () => {
       const newTheme = !isDark
-      document.documentElement.classList.toggle("dark")
       if (isControlled) {
         onThemeChange?.(newTheme ? "dark" : "light")
       } else {
+        document.documentElement.classList.toggle("dark")
         setInternalIsDark(newTheme)
         localStorage.setItem("theme", newTheme ? "dark" : "light")
       }
