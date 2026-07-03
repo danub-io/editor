@@ -181,6 +181,9 @@
   --font-size-caption--line-height: 1.4;
   --font-size-caption--font-weight: 400;
 
+  --font-size-xs: 0.8125rem;
+  --font-size-xs--line-height: 1.4;
+
   /* =================================================================
      Spacing tokens
      ================================================================= */
@@ -228,7 +231,7 @@
 
   /* Outline */
   --outline: #5c6060;
-  --outline-variant: #858989;
+  --outline-variant: #c5c0c0;
 
   /* Surface tint */
   --surface-tint: #5f5e5e;
@@ -640,6 +643,14 @@ html.light .editor-workspace .text-gray-400 {
 html.light .editor-workspace .text-neutral-500,
 html.light .editor-workspace .text-gray-500 {
   color: var(--on-surface-variant) !important;
+}
+
+/* Upper neutral range — Flowbite tokens resolve to light beige (near-white) */
+html.light .editor-workspace .text-neutral-700,
+html.light .editor-workspace .text-neutral-800,
+html.light .editor-workspace .text-neutral-850,
+html.light .editor-workspace .text-neutral-900 {
+  color: var(--on-surface) !important;
 }
 
 /* Standard white text in dark mode becomes dark neutral in light mode */

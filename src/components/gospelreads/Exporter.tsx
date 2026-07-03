@@ -383,10 +383,10 @@ export default function Exporter({ chapters, settings, setSettings }: ExporterPr
                 
                 {/* Simulated text layout */}
                 <div className="font-serif leading-relaxed text-justify space-y-4">
-                  <p className="indent-8 text-[11px] md:text-xs text-neutral-800">
+                  <p className="indent-8 text-xs md:text-sm text-neutral-800">
                     {chapters[0]?.content.substring(0, 420) || 'Comece a preencher seu manuscrito no estúdio para ver seu livro ganhar corpo aqui...'}...
                   </p>
-                  <p className="indent-8 text-[11px] md:text-xs text-neutral-800">
+                  <p className="indent-8 text-xs md:text-sm text-neutral-800">
                     {chapters[0]?.content.substring(420, 800) ? chapters[0]?.content.substring(420, 800) + '...' : ''}
                   </p>
                 </div>
@@ -400,7 +400,7 @@ export default function Exporter({ chapters, settings, setSettings }: ExporterPr
             </div>
           </div>
 
-          <div className="w-full bg-neutral-900 p-4 border border-neutral-800 rounded-2xl text-xs text-neutral-400 flex items-start gap-2.5 mt-4">
+          <div className="w-full bg-neutral-900 p-4 border border-neutral-800 rounded-2xl text-sm text-neutral-400 flex items-start gap-2.5 mt-4">
             <Info size={16} className="text-indigo-400 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
               As margens de corte virtuais e as fontes incorporadas que você visualiza no simulador acima ajudam a garantir que o texto não seja cortado durante o processo de guilhotina e impressão de tiragens físicas.

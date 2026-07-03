@@ -1208,7 +1208,7 @@ export default function WorkspaceEditor({
                           className="bg-neutral-950 border border-neutral-800 p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
                         >
                           <div className="font-serif font-semibold text-white pr-4">{card.title}</div>
-                          <p className="text-neutral-400 text-xs leading-normal font-sans">{card.content}</p>
+                          <p className="text-neutral-400 text-sm leading-normal font-sans">{card.content}</p>
                           <div className="flex justify-between items-center pt-1 border-t border-neutral-850/50 mt-1.5">
                             <span className="text-[10px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Estrutura'}</span>
                             <button onClick={() => deletePlanningCard(card.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
@@ -1244,7 +1244,7 @@ export default function WorkspaceEditor({
                           className="bg-neutral-950 border border-neutral-800 p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
                         >
                           <div className="font-serif font-semibold text-white pr-4">{card.title}</div>
-                          <p className="text-neutral-400 text-xs leading-normal font-sans">{card.content}</p>
+                          <p className="text-neutral-400 text-sm leading-normal font-sans">{card.content}</p>
                           <div className="flex justify-between items-center pt-1 border-t border-neutral-850/50 mt-1.5">
                             <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Trama'}</span>
                             <button onClick={() => deletePlanningCard(card.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
@@ -1280,7 +1280,7 @@ export default function WorkspaceEditor({
                           className="bg-neutral-950 border border-neutral-800 p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
                         >
                           <div className="font-serif font-semibold text-white pr-4">{card.title}</div>
-                          <p className="text-neutral-400 text-xs leading-normal font-sans">{card.content}</p>
+                          <p className="text-neutral-400 text-sm leading-normal font-sans">{card.content}</p>
                           <div className="flex justify-between items-center pt-1 border-t border-neutral-850/50 mt-1.5">
                             <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Clímax'}</span>
                             <button onClick={() => deletePlanningCard(card.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
@@ -1333,7 +1333,7 @@ export default function WorkspaceEditor({
                           <span className="text-2xl">{block.emoji || '👤'}</span>
                           <div className="text-left">
                             <h4 className="font-serif font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{block.title}</h4>
-                            <p className="text-xs text-neutral-400 font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
+                            <p className="text-sm text-neutral-400 font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
                           </div>
                         </div>
                         <button 
@@ -1395,7 +1395,7 @@ export default function WorkspaceEditor({
                           <span className="text-2xl">{block.emoji || '📍'}</span>
                           <div className="text-left">
                             <h4 className="font-serif font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{block.title}</h4>
-                            <p className="text-xs text-neutral-400 font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
+                            <p className="text-sm text-neutral-400 font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
                           </div>
                         </div>
                         <button 
@@ -1457,7 +1457,7 @@ export default function WorkspaceEditor({
                           <span className="text-2xl">{block.emoji || '📅'}</span>
                           <div className="text-left">
                             <h4 className="font-serif font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{block.title}</h4>
-                            <p className="text-xs text-neutral-400 font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
+                            <p className="text-sm text-neutral-400 font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
                           </div>
                         </div>
                         <button 
@@ -1821,7 +1821,7 @@ export default function WorkspaceEditor({
                                   <span className="text-neutral-350 dark:text-neutral-700 cursor-grab">⋮⋮</span>
                                 </div>
                               </div>
-                              <p className="text-neutral-500 dark:text-neutral-400 text-[11px] leading-relaxed font-sans mt-1.5 line-clamp-3">{card.content}</p>
+                              <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed font-sans mt-1.5 line-clamp-3">{card.content}</p>
                             </div>
                             
                             <div className="flex justify-between items-center pt-2 border-t border-neutral-100 dark:border-neutral-900 mt-2">
@@ -2100,7 +2100,7 @@ export default function WorkspaceEditor({
                             value={card.content}
                             rows={3}
                             onChange={(e) => setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, content: e.target.value } : c))}
-                            className="w-full bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-850 rounded-xl p-2 text-[11px] text-neutral-600 dark:text-neutral-300 focus:outline-none resize-none leading-relaxed"
+                            className="w-full bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-850 rounded-xl p-2 text-sm text-neutral-600 dark:text-neutral-300 focus:outline-none resize-none leading-relaxed"
                           />
                         </div>
                       ))}
@@ -2259,10 +2259,10 @@ export default function WorkspaceEditor({
                             <p className="font-serif italic">"...setecentas palavras haviam sido confiadas..."</p>
                             <span className="text-[10px] text-neutral-400 block mt-1">Concordância passiva correta. Nenhuma alteração solicitada.</span>
                           </div>
-                          <p className="text-[11px] text-neutral-400 text-center py-4">Tudo limpo por aqui! Seu manuscrito não possui falhas crassas.</p>
+                          <p className="text-sm text-neutral-400 text-center py-4">Tudo limpo por aqui! Seu manuscrito não possui falhas crassas.</p>
                         </div>
                       ) : (
-                        <p className="text-[11px] text-neutral-500 italic text-center">Ative o corretor ortográfico para realizar a varredura do texto.</p>
+                        <p className="text-sm text-neutral-500 italic text-center">Ative o corretor ortográfico para realizar a varredura do texto.</p>
                       )}
                     </div>
                   </div>
@@ -2850,7 +2850,7 @@ export default function WorkspaceEditor({
                         </div>
                         <div className="space-y-0.5">
                           <h4 className="text-xs font-bold text-white font-sans">{tpl.title}</h4>
-                          <p className="text-neutral-400 text-[11px] leading-relaxed max-w-xl font-sans">{tpl.description}</p>
+                          <p className="text-neutral-400 text-[12px] leading-relaxed max-w-xl font-sans">{tpl.description}</p>
                           <span className="text-[9px] bg-neutral-950 border border-neutral-850 text-neutral-500 font-semibold px-2 py-0.5 rounded font-mono uppercase tracking-wider block w-fit">
                             {tpl.category}
                           </span>
