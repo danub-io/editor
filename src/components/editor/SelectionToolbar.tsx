@@ -114,29 +114,27 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
     icon: React.ReactNode,
     isActive: boolean,
     onClick: () => void,
-    hasArrow = false,
   ) => (
     <button
       key={label}
       onClick={onClick}
       className={cn(
-        "relative flex items-center justify-center gap-0.5 px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+        "relative flex h-8 w-8 items-center justify-center transition-all focus:outline-none rounded-md",
         isActive
-          ? "bg-primary/10 text-primary"
-          : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface",
+          ? "text-[#00a2ed] dark:text-[#38bdf8] bg-sky-500/10 after:absolute after:bottom-0 after:left-1 after:right-1 after:h-[2px] after:bg-[#00a2ed] dark:after:bg-[#38bdf8]"
+          : "text-slate-650 hover:text-slate-900 dark:text-slate-350 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/80",
       )}
       title={label}
       aria-label={label}
     >
       {icon}
-      {hasArrow && <ChevronDown className="h-3 w-3 opacity-50" />}
     </button>
   );
 
   const dropdownMenu = (
     items: { label: string; icon: React.ReactNode; isActive: boolean; onClick: () => void }[],
   ) => (
-    <div className="absolute left-0 top-full z-50 mt-0 min-w-[120px] overflow-hidden border border-outline-variant bg-surface-container-lowest p-1">
+    <div className="absolute left-0 top-full z-50 mt-1 min-w-[120px] overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1e293b] p-1 rounded-xl shadow-xl animate-fade-in">
       {items.map((item) => (
         <button
           key={item.label}
@@ -145,10 +143,10 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
             closeDropdown();
           }}
           className={cn(
-            "flex w-full items-center gap-2 px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-              item.isActive
-              ? "bg-primary/10 text-primary"
-              : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface",
+            "flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold transition-colors rounded-lg",
+            item.isActive
+              ? "bg-[#00a2ed]/10 text-[#00a2ed] dark:text-[#38bdf8]"
+              : "text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60",
           )}
         >
           {item.icon}
@@ -169,9 +167,9 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
       className="fixed z-50 -translate-x-1/2"
       style={{ left: toolbarState.left, top: toolbarState.top }}
     >
-      <div className="flex flex-col overflow-hidden border border-outline-variant bg-surface-container-lowest">
+      <div className="flex flex-col overflow-hidden border border-slate-200 dark:border-slate-850 bg-white dark:bg-[#1f2937] p-1.5 rounded-xl shadow-2xl space-y-1">
         {/* Top row — Block / Structure */}
-        <div className="flex items-center gap-0.5 border-b border-outline-variant px-2 py-1.5">
+        <div className="flex items-center gap-1">
           {btn("Parágrafo", <Pilcrow className="h-4 w-4" />, isPara, () => {
             editor.chain().focus().setParagraph().run();
             closeDropdown();
@@ -183,13 +181,12 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
               <Heading1 className="h-4 w-4" />,
               isH1 || isH2 || isH3,
               () => toggleDropdown("heading"),
-              true,
             )}
             {openDropdown === "heading" &&
               dropdownMenu([
                 { label: "H1", icon: <Heading1 className="h-4 w-4" />, isActive: isH1, onClick: () => editor.chain().focus().toggleHeading({ level: 1 }).run() },
-                { label: "H2", icon: <span className="text-[10px] font-semibold">H2</span>, isActive: isH2, onClick: () => editor.chain().focus().toggleHeading({ level: 2 }).run() },
-                { label: "H3", icon: <span className="text-[10px] font-semibold">H3</span>, isActive: isH3, onClick: () => editor.chain().focus().toggleHeading({ level: 3 }).run() },
+                { label: "H2", icon: <span className="text-[10px] font-bold">H2</span>, isActive: isH2, onClick: () => editor.chain().focus().toggleHeading({ level: 2 }).run() },
+                { label: "H3", icon: <span className="text-[10px] font-bold">H3</span>, isActive: isH3, onClick: () => editor.chain().focus().toggleHeading({ level: 3 }).run() },
               ])}
           </div>
 
@@ -202,7 +199,6 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
                 editor.isActive({ textAlign: "right" }) ||
                 editor.isActive({ textAlign: "justify" }),
               () => toggleDropdown("align"),
-              true,
             )}
             {openDropdown === "align" &&
               dropdownMenu([
@@ -213,7 +209,7 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
               ])}
           </div>
 
-          <span className="mx-0.5 h-5 w-px bg-outline-variant" />
+          <span className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
 
           {btn("Lista Numerada", <ListOrdered className="h-4 w-4" />, editor.isActive("orderedList"), () => {
             editor.chain().focus().toggleOrderedList().run();
@@ -224,7 +220,7 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
             closeDropdown();
           })}
 
-          <span className="mx-0.5 h-5 w-px bg-outline-variant" />
+          <span className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
 
           {btn("Citação", <Quote className="h-4 w-4" />, editor.isActive("blockquote"), () => {
             editor.chain().focus().toggleBlockquote().run();
@@ -237,7 +233,7 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
         </div>
 
         {/* Bottom row — Character formatting / Inserts */}
-        <div className="flex items-center gap-0.5 px-2 py-1.5">
+        <div className="flex items-center gap-1">
           {btn("Negrito", <Bold className="h-4 w-4" />, editor.isActive("bold"), () => {
             editor.chain().focus().toggleBold().run();
           })}
@@ -251,7 +247,7 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
             editor.chain().focus().toggleStrike().run();
           })}
 
-          <span className="mx-0.5 h-5 w-px bg-outline-variant" />
+          <span className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
 
           <div className="relative">
             {btn(
@@ -261,7 +257,6 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
               </span>,
               editor.isActive("superscript") || editor.isActive("subscript"),
               () => toggleDropdown("script"),
-              true,
             )}
             {openDropdown === "script" &&
               dropdownMenu([
@@ -270,7 +265,7 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
               ])}
           </div>
 
-          <span className="mx-0.5 h-5 w-px bg-outline-variant" />
+          <span className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
 
           {btn("Link", <Link className="h-4 w-4" />, editor.isActive("link"), () => {
             if (editor.isActive("link")) {
@@ -286,7 +281,6 @@ export function SelectionToolbar({ editor, focusMode }: SelectionToolbarProps) {
           {btn("Comentário", <MessageSquare className="h-4 w-4" />, false, () => {
             const comment = window.prompt("Adicionar comentário ao trecho selecionado:");
             if (comment) {
-              // Placeholder — integração futura com sistema de comentários
               editor.chain().focus().run();
             }
             closeDropdown();

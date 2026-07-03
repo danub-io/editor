@@ -29,6 +29,7 @@ import {
   Type,
   Download,
   User,
+  Settings,
   Layout,
   BookMarked,
   HelpCircle,
@@ -51,6 +52,15 @@ import {
   Moon
 } from 'lucide-react';
 import { Chapter, WritingSettings, AuthorProfile, Book } from './types';
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import Underline from "@tiptap/extension-underline";
+import Superscript from "@tiptap/extension-superscript";
+import Subscript from "@tiptap/extension-subscript";
+import TextAlign from "@tiptap/extension-text-align";
+import Link from "@tiptap/extension-link";
+import { SelectionToolbar } from "../editor/SelectionToolbar";
 import Exporter from './Exporter';
 import AuthorProfileBuilder from './AuthorProfileBuilder';
 
@@ -171,6 +181,7 @@ interface PlanningCard {
   title: string;
   content: string;
   tag?: 'Estrutura' | 'Personagem' | 'Trama' | 'Cenário' | 'Geral';
+  images?: string[];
 }
 
 interface PlanningBoard {
@@ -227,6 +238,70 @@ export default function WorkspaceEditor({
   // Modals
   const [showExporterModal, setShowExporterModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showEditorSettingsModal, setShowEditorSettingsModal] = useState(false);
+
+  // Dialog elegante personalizado (substitui window.prompt e window.confirm)
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    type: 'prompt' | 'confirm';
+    title: string;
+    message: string;
+    defaultValue: string;
+    placeholder: string;
+    onConfirm: (val: string) => void;
+    onCancel: () => void;
+  }>({
+    isOpen: false,
+    type: 'confirm',
+    title: '',
+    message: '',
+    defaultValue: '',
+    placeholder: '',
+    onConfirm: () => {},
+    onCancel: () => {}
+  });
+
+  const customPrompt = (title: string, message: string, defaultValue: string = '', placeholder: string = ''): Promise<string | null> => {
+    return new Promise((resolve) => {
+      setDialogState({
+        isOpen: true,
+        type: 'prompt',
+        title,
+        message,
+        defaultValue,
+        placeholder,
+        onConfirm: (val) => {
+          setDialogState(prev => ({ ...prev, isOpen: false }));
+          resolve(val);
+        },
+        onCancel: () => {
+          setDialogState(prev => ({ ...prev, isOpen: false }));
+          resolve(null);
+        }
+      });
+    });
+  };
+
+  const customConfirm = (title: string, message: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setDialogState({
+        isOpen: true,
+        type: 'confirm',
+        title,
+        message,
+        defaultValue: '',
+        placeholder: '',
+        onConfirm: () => {
+          setDialogState(prev => ({ ...prev, isOpen: false }));
+          resolve(true);
+        },
+        onCancel: () => {
+          setDialogState(prev => ({ ...prev, isOpen: false }));
+          resolve(false);
+        }
+      });
+    });
+  };
 
   // World Building / Boards custom states
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
@@ -354,6 +429,12 @@ export default function WorkspaceEditor({
     ];
   });
 
+  // Load and persist footnotes (Item 7)
+  const [footnotes, setFootnotes] = useState<Record<string, { id: string; num: number; text: string }[]>>(() => {
+    const saved = localStorage.getItem('gospelreads_footnotes');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   // Track changes & spelling recommendations
   const [trackChanges, setTrackChanges] = useState(false);
   const [spellingActive, setSpellingActive] = useState(true);
@@ -362,6 +443,10 @@ export default function WorkspaceEditor({
     { id: 's-2', type: 'repetition', original: 'folha', replacement: 'página', comment: 'Repetição da palavra "folha" em parágrafos adjacentes.' }
   ]);
   const [deletedChapters, setDeletedChapters] = useState<Chapter[]>([]);
+
+  useEffect(() => {
+    localStorage.setItem('gospelreads_footnotes', JSON.stringify(footnotes));
+  }, [footnotes]);
 
   useEffect(() => {
     localStorage.setItem('gospelreads_planning_sections', JSON.stringify(planningSections));
@@ -409,39 +494,63 @@ export default function WorkspaceEditor({
   // Word & statistics math
   const countWords = (text: string) => {
     if (!text || !text.trim()) return 0;
-    return text.trim().split(/\s+/).length;
+    const cleanText = text.replace(/<[^>]*>/g, ' ');
+    return cleanText.trim().split(/\s+/).filter(Boolean).length;
   };
 
   const activeWords = activeChapter ? countWords(activeChapter.content) : 0;
   const totalWords = chapters.reduce((sum, ch) => sum + countWords(ch.content), 0);
   const totalChars = chapters.reduce((sum, ch) => sum + ch.content.length, 0);
 
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+      }),
+      Placeholder.configure({
+        placeholder: "Sua inspiração começa a fluir... Escreva, edite e acompanhe os seus insights nas barras laterais.",
+      }),
+      Underline,
+      Superscript,
+      Subscript,
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+      Link.configure({
+        openOnClick: true,
+      }),
+    ],
+    content: activeChapter ? activeChapter.content : '',
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      setSaveStatus('dirty');
+      setChapters(prev => prev.map(ch => ch.id === activeChapterId ? { ...ch, content: html } : ch));
+      
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      setSaveStatus('saving');
+      saveTimeoutRef.current = setTimeout(() => {
+        setSaveStatus('saved');
+      }, 1200);
+    },
+    editorProps: {
+      attributes: {
+        class: "focus:outline-none min-h-[380px] w-full",
+      },
+    },
+  });
+
+  useEffect(() => {
+    if (editor && activeChapter && editor.getHTML() !== activeChapter.content) {
+      editor.commands.setContent(activeChapter.content || "");
+    }
+  }, [activeChapterId, editor]);
+
   // Daily target updater
   useEffect(() => {
     const percentage = Math.min(Math.round((activeWords / settings.dailyGoal) * 100), 100);
     setDailyProgress(percentage);
   }, [activeWords, settings.dailyGoal]);
-
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    setSaveStatus('dirty');
-    
-    // Update chapter state
-    setChapters(prev => prev.map(ch => {
-      if (ch.id === activeChapterId) {
-        return { ...ch, content: newContent };
-      }
-      return ch;
-    }));
-
-    // Debounce saves
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    
-    setSaveStatus('saving');
-    saveTimeoutRef.current = setTimeout(() => {
-      setSaveStatus('saved');
-    }, 1200);
-  };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
@@ -470,7 +579,40 @@ export default function WorkspaceEditor({
     setShowAddPageModal(false);
   };
 
-  const deleteChapter = (id: string, e: React.MouseEvent) => {
+  const triggerAddFrontPage = async () => {
+    const title = await customPrompt("Nova Página Inicial", "Título da nova Página Inicial:", "", "Ex: Dedicatória, Agradecimentos...");
+    if (title) handleAddPage('front', 'custom', title);
+  };
+
+  const triggerAddBodyPage = async () => {
+    const isPart = await customConfirm("Criar Estrutura", "Deseja criar uma nova Parte ou um Capítulo? (Confirmar para Parte, Cancelar para Capítulo)");
+    if (isPart) {
+      const title = await customPrompt("Nova Parte", "Título da nova Parte:", "", "Ex: Parte I, Livro Um...");
+      if (title) handleAddPage('body', 'part', title);
+    } else {
+      const title = await customPrompt("Novo Capítulo", "Título do novo Capítulo:", "", "Ex: Capítulo 1, Prólogo...");
+      if (title) handleAddPage('body', 'chapter', title);
+    }
+  };
+
+  const triggerAddChapterToPart = async (partId: string, partTitle: string) => {
+    const chTitle = await customPrompt("Novo Capítulo", `Título do novo Capítulo para "${partTitle}":`, "", "Ex: Capítulo 1, Prólogo...");
+    if (chTitle) handleAddPage('body', 'chapter', chTitle, partId);
+  };
+
+  const triggerDeletePart = async (partId: string, partTitle: string) => {
+    const confirm = await customConfirm("Excluir Parte", `Excluir a parte "${partTitle}"? Os capítulos desta parte voltarão para o nível principal.`);
+    if (confirm) {
+      setChapters(prev => prev.map(c => c.partId === partId ? { ...c, partId: undefined } : c).filter(c => c.id !== partId));
+    }
+  };
+
+  const triggerAddBackPage = async () => {
+    const title = await customPrompt("Nova Página Final", "Título da nova Página Final:", "", "Ex: Sobre o Autor, Posfácio...");
+    if (title) handleAddPage('back', 'custom', title);
+  };
+
+  const deleteChapter = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (chapters.length <= 1) {
       alert('Você precisa ter pelo menos um capítulo em seu manuscrito.');
@@ -479,7 +621,10 @@ export default function WorkspaceEditor({
     const chapterToDelete = chapters.find(c => c.id === id);
     if (!chapterToDelete) return;
 
-    const confirmDelete = window.confirm(`Deseja realmente excluir o "${chapterToDelete.title}"? O capítulo será enviado para a lixeira temporária do editor.`);
+    const confirmDelete = await customConfirm(
+      'Delete chapter',
+      `Are you sure you want to remove “${chapterToDelete.title}”? An entry will be created in your writing timeline in case you need to recover the content later.`
+    );
     if (!confirmDelete) return;
 
     // Save to deleted list for possible recovery
@@ -567,9 +712,14 @@ export default function WorkspaceEditor({
   };
 
   // Snapshots
-  const createSnapshot = () => {
+  const createSnapshot = async () => {
     if (!activeChapter) return;
-    const title = window.prompt('Dê um título para esta versão do capítulo:', `Snapshot do ${activeChapter.title}`);
+    const title = await customPrompt(
+      'Criar Snapshot',
+      'Dê um título para esta versão do capítulo:',
+      `Snapshot do ${activeChapter.title}`,
+      'Ex: Revisão final, Capítulo 1 v2...'
+    );
     if (!title) return;
     const newSnap: VersionSnapshot = {
       id: `snap-${Date.now()}`,
@@ -600,10 +750,19 @@ export default function WorkspaceEditor({
   };
 
   // Planning board helpers
-  const addPlanningCard = (column: string, title?: string, content?: string) => {
-    const cardTitle = title !== undefined ? title : window.prompt('Digite o título para o seu card de planejamento:') || '';
+  const addPlanningCard = async (column: string, title?: string, content?: string) => {
+    let cardTitle = title;
+    if (cardTitle === undefined) {
+      const res = await customPrompt('Novo Card de Planejamento', 'Digite o título para o seu card de planejamento:', '', 'Título do card...');
+      cardTitle = res || '';
+    }
     if (!cardTitle.trim()) return;
-    const cardContent = content !== undefined ? content : window.prompt('Digite uma breve descrição para o card:') || '';
+
+    let cardContent = content;
+    if (cardContent === undefined) {
+      const res = await customPrompt('Descrição do Card', 'Digite uma breve descrição para o card:', '', 'Descrição do card...');
+      cardContent = res || '';
+    }
     
     const newCard: PlanningCard = {
       id: `pc-${Date.now()}`,
@@ -612,7 +771,7 @@ export default function WorkspaceEditor({
       content: cardContent.trim(),
       tag: 'Geral'
     };
-    setPlanningCards([...planningCards, newCard]);
+    setPlanningCards(prev => [...prev, newCard]);
   };
 
   const commitAddCard = (column: string) => {
@@ -623,8 +782,8 @@ export default function WorkspaceEditor({
   };
 
   // Dynamic Kanban Sections helpers
-  const addPlanningSection = () => {
-    const sectionName = window.prompt("Nome da nova seção:", "Nova Seção");
+  const addPlanningSection = async () => {
+    const sectionName = await customPrompt('Nova Seção de Planejamento', 'Nome da nova seção:', 'Nova Seção', 'Ex: Cenário, Personagens...');
     if (sectionName && sectionName.trim()) {
       const newSection = {
         id: `sec-${Date.now()}`,
@@ -634,20 +793,24 @@ export default function WorkspaceEditor({
     }
   };
 
-  const deletePlanningSection = (id: string) => {
+  const deletePlanningSection = async (id: string) => {
     if (planningSections.length <= 1) {
       alert("Você precisa manter pelo menos uma seção.");
       return;
     }
-    if (window.confirm("Deseja realmente excluir esta seção? Todos os cards nela serão movidos para a primeira seção.")) {
+    const confirm = await customConfirm(
+      'Excluir Seção',
+      'Deseja realmente excluir esta seção? Todos os cards nela serão movidos para a primeira seção.'
+    );
+    if (confirm) {
       const firstSectionId = planningSections.find(s => s.id !== id)?.id || planningSections[0].id;
       setPlanningCards(prev => prev.map(card => card.column === id ? { ...card, column: firstSectionId } : card));
       setPlanningSections(prev => prev.filter(s => s.id !== id));
     }
   };
 
-  const renamePlanningSection = (id: string, currentName: string) => {
-    const newName = window.prompt("Novo nome para a seção:", currentName);
+  const renamePlanningSection = async (id: string, currentName: string) => {
+    const newName = await customPrompt('Renomear Seção', 'Novo nome para a seção:', currentName, 'Nome da seção...');
     if (newName && newName.trim()) {
       setPlanningSections(prev => prev.map(s => s.id === id ? { ...s, name: newName.trim() } : s));
     }
@@ -696,8 +859,12 @@ export default function WorkspaceEditor({
     setShowNewBoardModal(false);
   };
 
-  const handleDeleteBoard = (boardId: string) => {
-    if (window.confirm('Excluir esta pasta de fichas e todas as suas sub-fichas permanentemente?')) {
+  const handleDeleteBoard = async (boardId: string) => {
+    const confirm = await customConfirm(
+      'Excluir Pasta de Fichas',
+      'Excluir esta pasta de fichas e todas as suas sub-fichas permanentemente?'
+    );
+    if (confirm) {
       setPlanningBoards(planningBoards.filter(b => b.id !== boardId));
       setPlanningBlocks(planningBlocks.filter(c => c.boardId !== boardId));
       if (activeBoardId === boardId) {
@@ -757,8 +924,12 @@ export default function WorkspaceEditor({
     setEditingCard(null);
   };
 
-  const handleDeleteCard = (cardId: string) => {
-    if (window.confirm('Excluir este bloco permanentemente?')) {
+  const handleDeleteCard = async (cardId: string) => {
+    const confirm = await customConfirm(
+      'Excluir Bloco',
+      'Excluir este bloco permanentemente?'
+    );
+    if (confirm) {
       setPlanningBlocks(planningBlocks.filter(c => c.id !== cardId));
     }
   };
@@ -866,11 +1037,11 @@ export default function WorkspaceEditor({
   const [activeRightTool, setActiveRightTool] = useState<string | null>(null);
 
   return (
-    <div className="w-full flex bg-[#09090b] h-screen max-h-screen overflow-hidden relative editor-workspace">
+    <div className="w-full flex bg-[#f7f3f2] dark:bg-[#09090b] h-screen max-h-screen overflow-hidden relative editor-workspace">
       
       {/* COLLAPSIBLE LEFT SIDEBAR ICON STRIP */}
       {!isDistractionFree && (
-        <aside className="w-16 border-r border-neutral-900 bg-[#09090b] flex flex-col justify-between items-center py-4 shrink-0 select-none hidden lg:flex">
+        <aside className="w-16 border-r border-neutral-900 bg-[#f7f3f2] dark:bg-[#09090b] flex flex-col justify-between items-center py-4 shrink-0 select-none hidden lg:flex">
           {/* Top: manuscript + planning only */}
           <div className="space-y-3.5 flex flex-col items-center">
             <button
@@ -914,13 +1085,21 @@ export default function WorkspaceEditor({
 
           {/* Bottom: avatar, search, trash, theme — bottom-to-top */}
           <div className="flex flex-col-reverse items-center gap-3">
-            {/* Avatar */}
-            <div
-              className="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-indigo-500/30 transition-colors"
-              title="Perfil"
+            {/* Avatar — foto de perfil clicável */}
+            <button
+              onClick={() => setShowProfileModal(true)}
+              className="w-8 h-8 rounded-full overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-all cursor-pointer focus:outline-none focus:border-indigo-500"
+              title="Configurações de Perfil"
             >
-              U
-            </div>
+              <img
+                src={
+                  profile.avatarUrl ||
+                  `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(profile.name || 'autor')}&backgroundColor=6366f1,818cf8&backgroundType=gradientLinear`
+                }
+                alt={profile.name || 'Perfil'}
+                className="w-full h-full object-cover"
+              />
+            </button>
 
             {/* Global search */}
             <button
@@ -961,11 +1140,11 @@ export default function WorkspaceEditor({
 
       {/* LEFT SIDEBAR: MANUSCRITO OR PLANEJAMENTO */}
       {!isDistractionFree && isLeftPanelOpen && (
-        <aside className="w-80 border-r border-neutral-900 bg-[#0c0c0e] flex flex-col justify-between shrink-0 hidden lg:flex select-none">
+        <aside className="w-80 border-r border-neutral-200 dark:border-neutral-900 bg-[#f7f3f2] dark:bg-[#0c0c0e] flex flex-col justify-between shrink-0 hidden lg:flex select-none">
           <div className="flex flex-col h-full overflow-hidden">
             
             {/* Sidebar Title Header with Close Button */}
-            <div className="p-4 border-b border-neutral-900 flex items-center justify-between gap-3 bg-[#09090b]">
+            <div className="p-4 border-b border-neutral-200 dark:border-neutral-900 flex items-center justify-between gap-3 bg-[#f7f3f2] dark:bg-[#09090b]">
               <span className="text-xs font-bold uppercase tracking-widest text-neutral-400 font-sans select-none">
                 {leftTab === 'manuscript' && 'Manuscrito'}
                 {leftTab === 'planning' && 'Quadro de Plotagem'}
@@ -1009,10 +1188,7 @@ export default function WorkspaceEditor({
                       <div className="text-[11px] font-bold uppercase tracking-widest text-neutral-500 pl-1 py-1 border-b border-neutral-900 flex items-center justify-between select-none">
                         <span>Páginas Iniciais</span>
                         <button 
-                          onClick={() => {
-                            const title = window.prompt("Título da nova Página Inicial:");
-                            if (title) handleAddPage('front', 'custom', title);
-                          }}
+                          onClick={triggerAddFrontPage}
                           className="text-xs text-indigo-400 hover:text-white cursor-pointer font-bold animate-pulse"
                         >
                           +
@@ -1044,16 +1220,7 @@ export default function WorkspaceEditor({
                       >
                         <span>Conteúdo Principal</span>
                         <button 
-                          onClick={() => {
-                            const isPart = window.confirm("Deseja criar uma nova Parte? (OK para Parte, Cancelar para Capítulo)");
-                            if (isPart) {
-                              const title = window.prompt("Título da nova Parte:");
-                              if (title) handleAddPage('body', 'part', title);
-                            } else {
-                              const title = window.prompt("Título do novo Capítulo:");
-                              if (title) handleAddPage('body', 'chapter', title);
-                            }
-                          }}
+                          onClick={triggerAddBodyPage}
                           className="text-xs text-indigo-400 hover:text-white cursor-pointer font-bold"
                         >
                           +
@@ -1096,12 +1263,7 @@ export default function WorkspaceEditor({
                                       </span>
                                       <div className="flex items-center gap-2">
                                         <button 
-                                          onClick={() => {
-                                            const chTitle = window.prompt(`Título do novo Capítulo para "${part.title}":`);
-                                            if (chTitle) {
-                                              handleAddPage('body', 'chapter', chTitle, part.id);
-                                            }
-                                          }}
+                                          onClick={() => triggerAddChapterToPart(part.id, part.title)}
                                           className="text-[11px] text-indigo-400 hover:text-white cursor-pointer font-bold"
                                           title="Adicionar capítulo a esta parte"
                                         >
@@ -1110,9 +1272,7 @@ export default function WorkspaceEditor({
                                         <button 
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            if (window.confirm(`Excluir a parte "${part.title}"? Os capítulos desta parte voltarão para o nível principal.`)) {
-                                              setChapters(prev => prev.map(c => c.partId === part.id ? { ...c, partId: undefined } : c).filter(c => c.id !== part.id));
-                                            }
+                                            triggerDeletePart(part.id, part.title);
                                           }}
                                           className="text-neutral-500 hover:text-red-400 cursor-pointer"
                                           title="Excluir parte"
@@ -1151,10 +1311,7 @@ export default function WorkspaceEditor({
                       <div className="text-[11px] font-bold uppercase tracking-widest text-neutral-500 pl-1 py-1 border-b border-neutral-900 flex items-center justify-between select-none">
                         <span>Páginas Finais</span>
                         <button 
-                          onClick={() => {
-                            const title = window.prompt("Título da nova Página Final:");
-                            if (title) handleAddPage('back', 'custom', title);
-                          }}
+                          onClick={triggerAddBackPage}
                           className="text-xs text-indigo-400 hover:text-white cursor-pointer font-bold"
                         >
                           +
@@ -1546,7 +1703,7 @@ export default function WorkspaceEditor({
                   </div>
 
                   {/* Daily Target Widget */}
-                  <div className="bg-[#0f0f12] border border-neutral-850 p-4 rounded-2xl space-y-3">
+                  <div className="bg-[#f7f3f2] dark:bg-[#0f0f12] border border-neutral-850 p-4 rounded-2xl space-y-3">
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-medium text-neutral-400 flex items-center gap-1.5">
                         <Clock size={13} className="text-indigo-400" /> Meta do Capítulo
@@ -1568,7 +1725,7 @@ export default function WorkspaceEditor({
                           if (goal) {
                             const num = parseInt(goal, 10);
                             if (!isNaN(num) && num > 0) {
-                              setSettings(prev => ({ ...prev, dailyGoal: num }));
+                      setSettings(prev => ({ ...prev, dailyGoal: num }));
                             }
                           }
                         }}
@@ -1586,268 +1743,125 @@ export default function WorkspaceEditor({
       )}
 
       {/* CENTER WRITING AREA & CANVAS */}
-      <section className="flex-1 flex flex-col bg-[#09090b] relative overflow-hidden">
+      <section className="flex-1 flex flex-col bg-[#f7f3f2] dark:bg-[#09090b] relative overflow-hidden">
         
         {leftTab === 'planning' ? (
-          activePlanningCardId ? (
-            /* PLANNING CARD DETAILS EDITOR SCREEN (from 4th image) */
-            (() => {
-              const card = planningCards.find(c => c.id === activePlanningCardId);
-              if (!card) {
-                setTimeout(() => setActivePlanningCardId(null), 0);
-                return null;
-              }
-              const colLabel = card.column === 'planning' ? 'Planning' : card.column === 'ato1' ? 'Act I' : card.column === 'ato2' ? 'Act II' : 'Act III';
-              return (
-                <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-[#0a0a0f] text-neutral-800 dark:text-neutral-200 space-y-6 select-none font-sans">
-                  {/* Top breadcrumbs and actions bar */}
-                  <div className="flex justify-between items-center border-b border-neutral-200 dark:border-indigo-950/40 pb-3">
-                    <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-450 font-medium select-none">
-                      <span className="cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1" onClick={() => setActivePlanningCardId(null)}>
-                        📋 Planning
-                      </span>
-                      <span>&gt;</span>
-                      <span className="flex items-center gap-1 font-semibold text-neutral-600 dark:text-neutral-450">
-                        📁 {colLabel}
-                      </span>
-                      <span>&gt;</span>
-                      <span className="text-neutral-800 dark:text-white font-bold">{card.title}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 select-none">
-                      <button 
-                        onClick={() => {
-                          const clone = { ...card, id: `pc-${Date.now()}`, title: `${card.title} (Cópia)` };
-                          setPlanningCards(prev => [...prev, clone]);
-                          alert('Card duplicado!');
-                        }}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-neutral-300 dark:border-neutral-800 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400 cursor-pointer font-semibold"
-                      >
-                        <Copy size={12} /> Duplicate
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const nextCol = card.column === 'planning' ? 'ato1' : card.column === 'ato1' ? 'ato2' : card.column === 'ato2' ? 'ato3' : 'planning';
-                          setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, column: nextCol } : c));
-                        }}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-neutral-300 dark:border-neutral-800 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400 cursor-pointer font-semibold"
-                      >
-                        <Move size={12} /> Move
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const newTag = window.prompt("Escolha uma tag ('Estrutura', 'Personagem', 'Trama', 'Cenário', 'Geral'):", card.tag || 'Geral');
-                          if (newTag) {
-                            setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, tag: newTag as any } : c));
-                          }
-                        }}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-neutral-300 dark:border-neutral-800 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400 cursor-pointer font-semibold"
-                      >
-                        <Pin size={12} /> Pin note
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if (window.confirm('Excluir este card permanentemente?')) {
-                            setPlanningCards(prev => prev.filter(c => c.id !== card.id));
-                            setActivePlanningCardId(null);
-                          }
-                        }}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs border border-red-200 dark:border-red-950/40 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer font-semibold"
-                      >
-                        <Trash2 size={12} /> Delete
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Main Grid Layout */}
-                  <div className="grid grid-cols-3 gap-8 items-start">
-                    {/* Left & Middle Column */}
-                    <div className="col-span-2 space-y-6">
-                      <div className="space-y-2">
-                        <input 
-                          type="text" 
-                          value={card.title} 
-                          onChange={(e) => setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, title: e.target.value } : c))}
-                          className="w-full text-3xl font-bold font-sans text-neutral-900 focus:outline-none border-none p-0 bg-transparent placeholder:text-neutral-300"
-                          placeholder="Untitled Card"
-                        />
-                        <textarea 
-                          value={card.content} 
-                          onChange={(e) => setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, content: e.target.value } : c))}
-                          className="w-full text-base text-neutral-600 focus:outline-none border-none p-0 resize-none bg-transparent placeholder:text-neutral-300 h-16 font-sans leading-relaxed"
-                          placeholder="Add a brief description..."
-                        />
-                      </div>
-
-                      {/* Attributes table */}
-                      <div className="border border-neutral-200 rounded-2xl overflow-hidden bg-neutral-50/50">
-                        <div className="p-4 space-y-3">
-                          <div className="grid grid-cols-3 gap-2 py-1 text-xs text-neutral-400 font-bold uppercase tracking-wider border-b border-neutral-200">
-                            <span>Atributo</span>
-                            <span className="col-span-2">Valor</span>
-                          </div>
-                          
-                          <div className="grid grid-cols-3 gap-2 items-center text-sm py-1.5 border-b border-neutral-100">
-                            <span className="font-semibold text-neutral-500">Tipo</span>
-                            <span className="col-span-2 text-neutral-800 font-mono bg-neutral-200/50 px-2 py-0.5 rounded w-fit text-xs font-bold uppercase">{card.tag || 'Geral'}</span>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2 items-center text-sm py-1.5 border-b border-neutral-100">
-                            <span className="font-semibold text-neutral-500">Seção</span>
-                            <span className="col-span-2 text-neutral-700">{colLabel}</span>
-                          </div>
-                        </div>
-
-                        {/* Interactive actions */}
-                        <div className="bg-neutral-100/80 px-4 py-2 flex gap-2 border-t border-neutral-200 select-none">
-                          <button 
-                            onClick={() => {
-                              const label = window.prompt("Nome do novo atributo:");
-                              if (label) alert(`Atributo "${label}" adicionado ao card!`);
-                            }}
-                            className="bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer"
-                          >
-                            + Add attribute
-                          </button>
-                          <button onClick={() => alert('Grupo adicionado!')} className="bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer">+ Add group</button>
-                          <button onClick={() => alert('Perguntas e Respostas adicionadas!')} className="bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer">+ Add Q&A</button>
-                          <button onClick={() => setShowTemplatesModal(true)} className="bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-650 text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer ml-auto">+ Add template</button>
-                        </div>
-                      </div>
-
-                      {/* Extended Notes area */}
-                      <div className="space-y-2 pt-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block font-sans">Notas de Trama e Insights</label>
-                        <textarea
-                          placeholder="Esta cena é sobre tirar o protagonist da zona de conforto. Eles são confrontados com um problema ou desafio. Escreva aqui detalhes profundos da cena..."
-                          className="w-full min-h-[180px] bg-neutral-50 border border-neutral-200 rounded-2xl p-4 text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:border-indigo-500 font-sans leading-relaxed"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Right Column */}
-                    <div className="space-y-4">
-                      <div className="border-2 border-dashed border-neutral-300 bg-neutral-50 rounded-2xl p-8 flex flex-col items-center justify-center text-center space-y-2 cursor-pointer hover:bg-neutral-100 hover:border-neutral-400 transition-all aspect-video">
-                        <Camera className="text-neutral-400" size={24} />
-                        <span className="text-xs text-neutral-500 font-bold">Add image</span>
-                        <span className="text-[10px] text-neutral-400 font-sans">Arraste uma ilustração aqui</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()
-          ) : (
-            /* FULL PAGE KANBAN PLANNING BOARD */
-            <div className="flex-1 overflow-y-auto p-8 bg-[#f5f5f7] dark:bg-[#09090b] text-neutral-800 dark:text-neutral-200 space-y-10 select-none">
-              {/* Planning Header */}
-              <div className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-900 pb-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">📋</span>
-                  <h2 className="text-xl font-bold font-serif text-neutral-900 dark:text-white tracking-wide">Planning</h2>
-                </div>
-                
-                <button 
-                  onClick={addPlanningSection}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
-                >
-                  Nova Seção <Plus size={14} />
-                </button>
+          /* FULL PAGE KANBAN PLANNING BOARD */
+          <div className="flex-1 overflow-y-auto p-8 bg-[#f7f3f2] dark:bg-[#09090b] text-neutral-800 dark:text-neutral-200 space-y-10 select-none">
+            {/* Planning Header */}
+            <div className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-900 pb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">📋</span>
+                <h2 className="text-xl font-bold font-serif text-neutral-900 dark:text-white tracking-wide">Planning</h2>
               </div>
+              
+              <button 
+                onClick={addPlanningSection}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+              >
+                Nova Seção <Plus size={14} />
+              </button>
+            </div>
 
-              {/* Stacked Rows Layout */}
-              <div className="space-y-8 text-left">
-                {planningSections.map(section => (
-                  <div 
-                    key={section.id}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, section.id)}
-                    className="space-y-4"
-                  >
-                    {/* Lane Header */}
-                    <div className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-850 pb-2">
-                      <div className="flex items-center gap-2 select-none">
-                        <span 
-                          onClick={() => renamePlanningSection(section.id, section.name)}
-                          className="text-lg font-bold text-neutral-800 dark:text-neutral-200 font-serif cursor-pointer hover:text-indigo-600"
-                        >
-                          {section.name}
-                        </span>
-                        {planningSections.length > 1 && (
-                          <button 
-                            onClick={() => deletePlanningSection(section.id)} 
-                            className="text-xs text-red-500 hover:text-red-700 cursor-pointer ml-2"
-                            title="Excluir Seção"
-                          >
-                            <X size={12} />
-                          </button>
-                        )}
-                      </div>
-                      
-                      <button 
-                        onClick={() => addPlanningCard(section.id)}
-                        className="bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-850 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-800 text-xs font-bold px-3 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+            {/* Stacked Rows Layout */}
+            <div className="space-y-8 text-left">
+              {planningSections.map(section => (
+                <div 
+                  key={section.id}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, section.id)}
+                  className="space-y-4"
+                >
+                  {/* Lane Header */}
+                  <div className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-850 pb-2">
+                    <div className="flex items-center gap-2 select-none">
+                      <span 
+                        onClick={() => renamePlanningSection(section.id, section.name)}
+                        className="text-lg font-bold text-neutral-800 dark:text-neutral-200 font-serif cursor-pointer hover:text-indigo-600"
                       >
-                        Add <Plus size={12} />
-                      </button>
-                    </div>
-
-                    {/* Cards horizontal shelf */}
-                    <div className="flex flex-wrap gap-4">
-                      {planningCards.filter(c => c.column === section.id).map(card => {
-                        const isPinned = pinnedCardsList && pinnedCardsList.includes(card.id);
-                        return (
-                          <div 
-                            key={card.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, card.id)}
-                            onClick={() => setActivePlanningCardId(card.id)}
-                            className="w-[245px] bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-4 rounded-xl text-sm relative group space-y-2 cursor-grab active:cursor-grabbing hover:border-neutral-300 dark:hover:border-neutral-750 transition-all shadow-sm text-left flex flex-col justify-between min-h-[135px]"
-                          >
-                            <div>
-                              <div className="flex justify-between items-start gap-2">
-                                <span className="font-serif font-bold text-neutral-850 dark:text-white line-clamp-1">{card.title}</span>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <button 
-                                    onClick={(e) => { 
-                                      e.stopPropagation(); 
-                                      togglePinCard(card.id); 
-                                    }} 
-                                    className="text-neutral-400 hover:text-indigo-500 cursor-pointer transition-colors"
-                                    title={isPinned ? "Desafixar" : "Fixar nas notas"}
-                                  >
-                                    <Pin size={11} className={isPinned ? "fill-indigo-500 text-indigo-500" : ""} />
-                                  </button>
-                                  <span className="text-neutral-350 dark:text-neutral-700 cursor-grab">⋮⋮</span>
-                                </div>
-                              </div>
-                              <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed font-sans mt-1.5 line-clamp-3">{card.content}</p>
-                            </div>
-                            
-                            <div className="flex justify-between items-center pt-2 border-t border-neutral-100 dark:border-neutral-900 mt-2">
-                              <span className="text-[9px] bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Geral'}</span>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); deletePlanningCard(card.id); }} 
-                                className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity cursor-pointer"
-                              >
-                                <Trash2 size={11} />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {planningCards.filter(c => c.column === section.id).length === 0 && (
-                        <div className="text-neutral-400 dark:text-neutral-600 text-xs italic font-sans py-2 select-none">Sem cards nesta seção. Clique em "Add +" para criar.</div>
+                        {section.name}
+                      </span>
+                      {planningSections.length > 1 && (
+                        <button 
+                          onClick={() => deletePlanningSection(section.id)} 
+                          className="text-xs text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                          title="Excluir Seção"
+                        >
+                          <X size={12} />
+                        </button>
                       )}
                     </div>
+                    
+                    <button 
+                      onClick={() => addPlanningCard(section.id)}
+                      className="bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-850 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-800 text-xs font-bold px-3 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                    >
+                      Add <Plus size={12} />
+                    </button>
                   </div>
-                ))}
-              </div>
+
+                  {/* Cards horizontal shelf */}
+                  <div className="flex flex-wrap gap-4">
+                    {planningCards.filter(c => c.column === section.id).map(card => {
+                      const isPinned = pinnedCardsList && pinnedCardsList.includes(card.id);
+                      return (
+                        <div 
+                          key={card.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, card.id)}
+                          onClick={() => setActivePlanningCardId(card.id)}
+                          className="w-[245px] bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-4 rounded-xl text-sm relative group space-y-2 cursor-grab active:cursor-grabbing hover:border-neutral-300 dark:hover:border-neutral-750 transition-all shadow-sm text-left flex flex-col justify-between min-h-[135px]"
+                        >
+                          <div>
+                            <div className="flex justify-between items-start gap-2">
+                              <span className="font-serif font-bold text-neutral-850 dark:text-white line-clamp-1">{card.title}</span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button 
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    togglePinCard(card.id); 
+                                  }} 
+                                  className="text-neutral-400 hover:text-indigo-500 cursor-pointer transition-colors"
+                                  title={isPinned ? "Desafixar" : "Fixar nas notas"}
+                                >
+                                  <Pin size={11} className={isPinned ? "fill-indigo-500 text-indigo-500" : ""} />
+                                </button>
+                                <span className="text-neutral-350 dark:text-neutral-700 cursor-grab">⋮⋮</span>
+                              </div>
+                            </div>
+                            {card.images && card.images.length > 0 && (
+                              <img 
+                                src={card.images[0]} 
+                                alt="Card Preview" 
+                                className="w-full h-20 object-cover rounded-lg border border-neutral-200 dark:border-neutral-800 my-1" 
+                              />
+                            )}
+                            <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed font-sans mt-1.5 line-clamp-3">{card.content}</p>
+                          </div>
+                          
+                          <div className="flex justify-between items-center pt-2 border-t border-neutral-100 dark:border-neutral-900 mt-2">
+                            <span className="text-[9px] bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Geral'}</span>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); deletePlanningCard(card.id); }} 
+                              className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity cursor-pointer"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {planningCards.filter(c => c.column === section.id).length === 0 && (
+                      <div className="text-neutral-400 dark:text-neutral-600 text-xs italic font-sans py-2 select-none">Sem cards nesta seção. Clique em "Add +" para criar.</div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          )
+          </div>
         ) : (
           /* The Text Editor Canvas Sheet */
-          <div className="flex-1 overflow-y-auto px-6 py-8 md:px-12 lg:px-20 flex justify-center bg-[#09090b]">
+          <div className="flex-1 overflow-y-auto px-6 py-8 md:px-12 lg:px-20 flex justify-center bg-[#f7f3f2] dark:bg-[#09090b]">
             <div className="w-full max-w-3xl flex flex-col bg-neutral-900 border border-neutral-800 rounded-3xl shadow-2xl p-8 md:p-14 relative min-h-[70vh] editor-paper">
               
               {/* Chapter Header */}
@@ -1864,15 +1878,16 @@ export default function WorkspaceEditor({
                 </span>
               </div>
 
+              {/* Selection Toolbar for editor */}
+              {editor && <SelectionToolbar editor={editor} focusMode={isDistractionFree} />}
+
               {/* Writing Area */}
-              <textarea
-                ref={textareaRef}
-                value={activeChapter ? activeChapter.content : ''}
-                onChange={handleContentChange}
-                placeholder="Sua inspiração começa a fluir... Escreva, edite e acompanhe os seus insights nas barras laterais."
-                className={`flex-1 w-full border-none resize-none bg-transparent focus:outline-none focus:ring-0 placeholder:text-neutral-700 ${getFontClass()} ${getFontSizeClass()} text-neutral-200`}
+              <div 
+                className={`flex-1 w-full text-left bg-transparent focus:outline-none ${getFontClass()} ${getFontSizeClass()} text-neutral-200 outline-none`}
                 style={{ minHeight: '380px' }}
-              />
+              >
+                {editor && <EditorContent editor={editor} />}
+              </div>
 
               {/* Distraction free overlay indicators */}
               {isDistractionFree && (
@@ -1899,27 +1914,78 @@ export default function WorkspaceEditor({
         <div className="flex shrink-0 select-none">
           {/* Collapse drawer content panel */}
           {activeRightTool && (
-            <aside className="w-80 border-l border-neutral-200 dark:border-neutral-900 bg-[#f5f3ef] dark:bg-[#0c0c0e] flex flex-col justify-between overflow-hidden animate-fade-in">
+            <aside className="w-80 border-l border-neutral-200 dark:border-neutral-900 bg-[#f7f3f2] dark:bg-[#0c0c0e] flex flex-col justify-between overflow-hidden animate-fade-in">
               <div className="p-5 space-y-6 h-full flex flex-col justify-start">
                 
                 {/* Tool title header */}
                 <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-indigo-400 font-mono flex items-center gap-2">
-                    {activeRightTool === 'stats' && <><AlignLeft size={13} /> Metas & Insights</>}
-                    {activeRightTool === 'challenges' && <><Trophy size={13} /> Desafios Literários</>}
-                    {activeRightTool === 'notes' && <><Pin size={13} /> Notas Fixadas</>}
-                    {activeRightTool === 'track' && <><MessageSquare size={13} /> Sugestões & Revisões</>}
-                    {activeRightTool === 'history' && <><History size={13} /> Snapshots de Versão</>}
-                    {activeRightTool === 'search' && <><Search size={13} /> Buscar & Substituir</>}
-                    {activeRightTool === 'spell' && <><Type size={13} /> Corretor Ortográfico</>}
-                    {activeRightTool === 'trash' && <><Trash2 size={13} /> Lixeira do Livro</>}
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-indigo-400 font-mono flex items-center gap-2">
+                    {activeRightTool === 'stats' && <><AlignLeft size={15} /> Metas & Insights</>}
+                    {activeRightTool === 'challenges' && <><Trophy size={15} /> Desafios Literários</>}
+                    {activeRightTool === 'notes' && <><Pin size={15} /> Notas Fixadas</>}
+                    {activeRightTool === 'track' && <><MessageSquare size={15} /> Sugestões & Revisões</>}
+                    {activeRightTool === 'history' && <><History size={15} /> Snapshots de Versão</>}
+                    {activeRightTool === 'search' && <><Search size={15} /> Buscar & Substituir</>}
+                    {activeRightTool === 'spell' && <><Type size={15} /> Corretor Ortográfico</>}
+                    {activeRightTool === 'trash' && <><Trash2 size={15} /> Lixeira do Livro</>}
+                    {activeRightTool === 'footnotes' && <><BookMarked size={15} /> Notas de Rodapé</>}
                   </h3>
-                  <button 
-                    onClick={() => setActiveRightTool(null)} 
-                    className="p-1 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded"
-                  >
-                    <X size={13} />
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {activeRightTool === 'notes' && (
+                      <>
+                        <button 
+                          onClick={() => {
+                            const input = document.getElementById('sidebar-image-upload') as HTMLInputElement;
+                            if (input) input.click();
+                          }}
+                          className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-450 hover:text-indigo-500 rounded-lg transition-colors"
+                          title="Anexar Imagem"
+                        >
+                          <Plus size={16} />
+                        </button>
+                        <input 
+                          type="file" 
+                          id="sidebar-image-upload" 
+                          accept="image/*" 
+                          multiple 
+                          className="hidden" 
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (files && files.length > 0) {
+                              const readPromises = Array.from(files).map(file => {
+                                return new Promise<string>((resolve) => {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    resolve(reader.result as string);
+                                  };
+                                  reader.readAsDataURL(file);
+                                });
+                              });
+                              Promise.all(readPromises).then(base64Images => {
+                                const newId = `pc-${Date.now()}`;
+                                const newCard = {
+                                  id: newId,
+                                  column: planningSections[0]?.id || 'planning',
+                                  title: `Imagem Anexada (${new Date().toLocaleDateString('pt-BR')})`,
+                                  content: 'Imagem carregada via painel.',
+                                  tag: 'Geral' as const,
+                                  images: base64Images
+                                };
+                                setPlanningCards(prev => [...prev, newCard]);
+                                setPinnedCardsList(prev => [...prev, newId]);
+                              });
+                            }
+                          }}
+                        />
+                      </>
+                    )}
+                    <button 
+                      onClick={() => setActiveRightTool(null)} 
+                      className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg transition-colors"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* TAB CONTENT: Stats & Insights */}
@@ -1956,21 +2022,21 @@ export default function WorkspaceEditor({
 
                     {/* Stats table */}
                     <div className="space-y-3">
-                      <div className="text-[10px] font-bold text-neutral-400 uppercase">Dados do Capítulo</div>
-                      <div className="space-y-1.5 text-xs font-sans">
-                        <div className="flex justify-between py-1 border-b border-neutral-900 text-neutral-400">
+                      <div className="text-xs font-bold text-neutral-400 uppercase">Dados do Capítulo</div>
+                      <div className="space-y-1.5 text-sm font-sans">
+                        <div className="flex justify-between py-1.5 border-b border-neutral-900 text-neutral-400">
                           <span>Tempo de Leitura</span>
                           <span className="font-mono text-white font-medium">{readingTime()} min</span>
                         </div>
-                        <div className="flex justify-between py-1 border-b border-neutral-900 text-neutral-400">
+                        <div className="flex justify-between py-1.5 border-b border-neutral-900 text-neutral-400">
                           <span>Contagem de Palavras</span>
                           <span className="font-mono text-white font-medium">{activeWords}</span>
                         </div>
-                        <div className="flex justify-between py-1 border-b border-neutral-900 text-neutral-400">
+                        <div className="flex justify-between py-1.5 border-b border-neutral-900 text-neutral-400">
                           <span>Caracteres Totais</span>
                           <span className="font-mono text-white font-medium">{activeChapter?.content.length || 0}</span>
                         </div>
-                        <div className="flex justify-between py-1 border-b border-neutral-900 text-neutral-400">
+                        <div className="flex justify-between py-1.5 border-b border-neutral-900 text-neutral-400">
                           <span>Parágrafos</span>
                           <span className="font-mono text-white font-medium">
                             {activeChapter?.content.split('\n\n').filter(p => p.trim()).length || 0}
@@ -1981,18 +2047,18 @@ export default function WorkspaceEditor({
 
                     {/* Word frequency analysis */}
                     <div className="space-y-3">
-                      <div className="text-[10px] font-bold text-neutral-400 uppercase">Palavras Mais Frequentes</div>
+                      <div className="text-xs font-bold text-neutral-400 uppercase">Palavras Mais Frequentes</div>
                       {wordFrequency().length > 0 ? (
                         <div className="space-y-2">
                           {wordFrequency().map(([word, freq]) => (
                             <div key={word} className="flex justify-between items-center bg-neutral-950 p-2 border border-neutral-850 rounded-xl text-xs">
                               <span className="font-serif text-white italic">"{word}"</span>
-                              <span className="font-mono text-indigo-400 text-[10px] bg-indigo-500/10 px-2 py-0.5 rounded-full font-bold">{freq} ocorrências</span>
+                              <span className="font-mono text-indigo-400 text-xs bg-indigo-500/10 px-2 py-0.5 rounded-full font-bold">{freq} ocorrências</span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[11px] text-neutral-500 italic">Escreva mais texto para visualizar as repetições de palavras.</p>
+                        <p className="text-xs text-neutral-500 italic">Escreva mais texto para visualizar as repetições de palavras.</p>
                       )}
                     </div>
                   </div>
@@ -2001,20 +2067,20 @@ export default function WorkspaceEditor({
                 {/* TAB CONTENT: Challenges */}
                 {activeRightTool === 'challenges' && (
                   <div className="space-y-4 flex-1 overflow-y-auto text-neutral-300">
-                    <p className="text-xs text-neutral-400 leading-relaxed">Participe de desafios literários para turbinar a sua produtividade.</p>
+                    <p className="text-sm text-neutral-400 leading-relaxed">Participe de desafios literários para turbinar a sua produtividade.</p>
                     
                     <div className="bg-neutral-900/60 p-4 border border-neutral-850 rounded-2xl space-y-3">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h4 className="text-xs font-bold text-white font-serif">Meia Maratona de Escrita</h4>
-                          <p className="text-[10px] text-neutral-400 mt-0.5">Sua meta mensal de 10k palavras.</p>
+                          <h4 className="text-sm font-bold text-white font-serif">Meia Maratona de Escrita</h4>
+                          <p className="text-xs text-neutral-400 mt-0.5">Sua meta mensal de 10k palavras.</p>
                         </div>
-                        <span className="text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded font-mono uppercase font-bold">Ativo</span>
+                        <span className="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded font-mono uppercase font-bold">Ativo</span>
                       </div>
                       <div className="w-full bg-neutral-950 h-1.5 rounded-full overflow-hidden border border-neutral-900">
                         <div className="bg-indigo-500 h-full w-[45%]" />
                       </div>
-                      <div className="flex justify-between text-[9px] text-neutral-500 font-mono">
+                      <div className="flex justify-between text-xs text-neutral-500 font-mono">
                         <span>4.500 palavras</span>
                         <span>10.000 alvo</span>
                       </div>
@@ -2022,10 +2088,10 @@ export default function WorkspaceEditor({
 
                     <div className="bg-neutral-900/60 p-4 border border-emerald-500/10 rounded-2xl space-y-2">
                       <div className="flex justify-between items-center">
-                        <h4 className="text-xs font-bold text-neutral-300 font-serif">Arrancada de Fim de Semana</h4>
-                        <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono uppercase font-bold">Concluído</span>
+                        <h4 className="text-sm font-bold text-neutral-300 font-serif">Arrancada de Fim de Semana</h4>
+                        <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono uppercase font-bold">Concluído</span>
                       </div>
-                      <p className="text-[10px] text-neutral-400 leading-tight">Escreva 2.000 palavras entre sábado e domingo para liberar medalhas estelares.</p>
+                      <p className="text-xs text-neutral-400 leading-tight">Escreva 2.000 palavras entre sábado e domingo para liberar medalhas estelares.</p>
                     </div>
                   </div>
                 )}
@@ -2038,29 +2104,56 @@ export default function WorkspaceEditor({
                     </p>
 
                     {/* Create New Card Form */}
-                    <div className="bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 text-left">
-                      <div className="text-[10px] font-bold text-neutral-400 uppercase">Criar Nota Fixada</div>
+                    <div className="bg-[#f7f3f2] dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 text-left">
+                      <div className="text-xs font-bold text-neutral-400 uppercase">Criar Nota / Card</div>
                       <input 
                         type="text"
                         id="new-note-title"
                         placeholder="Título da nota..."
-                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-800 dark:text-white focus:outline-none"
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-850 dark:text-white focus:outline-none"
                       />
                       <textarea
                         id="new-note-content"
                         placeholder="Descrição da nota..."
-                        rows={3}
-                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-800 dark:text-white focus:outline-none resize-none"
+                        rows={2}
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-805 dark:text-white focus:outline-none resize-none"
                       />
+                      <div className="flex gap-2 items-center text-xs">
+                        <select 
+                          id="new-note-section"
+                          className="bg-neutral-55 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-1.5 text-xs text-neutral-700 dark:text-white flex-1 focus:outline-none"
+                        >
+                          {planningSections.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={async () => {
+                            const name = window.prompt("Nome da nova seção:");
+                            if (name && name.trim()) {
+                              const newSection = { id: `sec-${Date.now()}`, name: name.trim() };
+                              setPlanningSections(prev => [...prev, newSection]);
+                              setTimeout(() => {
+                                const select = document.getElementById('new-note-section') as HTMLSelectElement;
+                                if (select) select.value = newSection.id;
+                              }, 50);
+                            }
+                          }}
+                          className="px-2 py-1.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-350 rounded-xl font-bold cursor-pointer"
+                        >
+                          + Seção
+                        </button>
+                      </div>
                       <button
                         onClick={() => {
                           const titleEl = document.getElementById('new-note-title') as HTMLInputElement;
                           const contentEl = document.getElementById('new-note-content') as HTMLTextAreaElement;
+                          const sectionEl = document.getElementById('new-note-section') as HTMLSelectElement;
                           if (titleEl && titleEl.value.trim()) {
                             const newId = `pc-${Date.now()}`;
                             const newCard = {
                               id: newId,
-                              column: planningSections[0]?.id || 'planning',
+                              column: sectionEl?.value || planningSections[0]?.id || 'planning',
                               title: titleEl.value.trim(),
                               content: contentEl.value.trim() || 'Sem descrição.',
                               tag: 'Geral' as const
@@ -2073,14 +2166,60 @@ export default function WorkspaceEditor({
                         }}
                         className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-xl transition-all cursor-pointer"
                       >
-                        Adicionar Nota
+                        Criar Nota
                       </button>
                     </div>
 
                     {/* Notes List */}
-                    <div className="space-y-3 mt-2 text-left">
-                      {planningCards.filter(c => pinnedCardsList.includes(c.id)).map(card => (
-                        <div key={card.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 relative group shadow-sm">
+                    <div 
+                      className="space-y-3 mt-2 text-left"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const draggedId = e.dataTransfer.getData('draggedCardId');
+                        const targetId = e.currentTarget.getAttribute('data-target-id');
+                        // Simple reorder helper
+                        if (draggedId && draggedId !== targetId) {
+                          setPinnedCardsList(prev => {
+                            const filter = prev.filter(id => id !== draggedId);
+                            return [draggedId, ...filter];
+                          });
+                        }
+                      }}
+                    >
+                      {planningCards.filter(c => pinnedCardsList.includes(c.id)).map((card, idx) => (
+                        <div 
+                          key={card.id} 
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('draggedCardId', card.id);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.add('border-indigo-500');
+                          }}
+                          onDragLeave={(e) => {
+                            e.currentTarget.classList.remove('border-indigo-500');
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove('border-indigo-500');
+                            const draggedId = e.dataTransfer.getData('draggedCardId');
+                            if (draggedId && draggedId !== card.id) {
+                              setPinnedCardsList(prev => {
+                                const list = [...prev];
+                                const dragIndex = list.indexOf(draggedId);
+                                const hoverIndex = list.indexOf(card.id);
+                                if (dragIndex > -1 && hoverIndex > -1) {
+                                  list.splice(dragIndex, 1);
+                                  list.splice(hoverIndex, 0, draggedId);
+                                }
+                                return list;
+                              });
+                            }
+                          }}
+                          className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 relative group shadow-sm transition-colors cursor-grab active:cursor-grabbing"
+                        >
                           <div className="font-serif font-bold text-neutral-900 dark:text-white flex justify-between items-center">
                             <input
                               type="text"
@@ -2088,20 +2227,42 @@ export default function WorkspaceEditor({
                               onChange={(e) => setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, title: e.target.value } : c))}
                               className="bg-transparent border-none p-0 font-bold text-neutral-900 dark:text-white focus:outline-none w-full mr-2"
                             />
-                            <button 
-                              onClick={() => togglePinCard(card.id)}
-                              className="text-indigo-500 hover:text-neutral-500"
-                              title="Desafixar"
-                            >
-                              <Pin size={12} className="fill-indigo-500 rotate-45" />
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button 
+                                onClick={() => togglePinCard(card.id)}
+                                className="text-indigo-500 hover:text-neutral-500 cursor-pointer"
+                                title="Desafixar"
+                              >
+                                <Pin size={12} className="fill-indigo-500 rotate-45" />
+                              </button>
+                            </div>
                           </div>
+                          
+                          {/* Render card images if any */}
+                          {card.images && card.images.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 py-1">
+                              {card.images.map((img, i) => (
+                                <img 
+                                  key={i} 
+                                  src={img} 
+                                  alt="Note illustration" 
+                                  className="w-16 h-12 object-cover rounded-lg border border-neutral-200 dark:border-neutral-800" 
+                                />
+                              ))}
+                            </div>
+                          )}
+
                           <textarea
                             value={card.content}
-                            rows={3}
+                            rows={2}
                             onChange={(e) => setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, content: e.target.value } : c))}
-                            className="w-full bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-850 rounded-xl p-2 text-sm text-neutral-600 dark:text-neutral-300 focus:outline-none resize-none leading-relaxed"
+                            className="w-full bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-600 dark:text-neutral-300 focus:outline-none resize-none leading-relaxed"
                           />
+                          
+                          <div className="flex justify-between items-center text-[10px] text-neutral-400 dark:text-neutral-500 pt-1">
+                            <span className="font-mono">Seção: {planningSections.find(s => s.id === card.column)?.name || 'Geral'}</span>
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity">⋮ Drag to reorder</span>
+                          </div>
                         </div>
                       ))}
                       {planningCards.filter(c => pinnedCardsList.includes(c.id)).length === 0 && (
@@ -2118,7 +2279,7 @@ export default function WorkspaceEditor({
                     <div className="flex items-center justify-between bg-neutral-900/60 p-3.5 border border-neutral-850 rounded-2xl text-xs">
                       <div>
                         <span className="font-bold text-white block">Rastrear Alterações</span>
-                        <span className="text-[9px] text-neutral-500">Registrar histórico de modificações</span>
+                        <span className="text-xs text-neutral-500">Registrar histórico de modificações</span>
                       </div>
                       <input
                         type="checkbox"
@@ -2129,10 +2290,10 @@ export default function WorkspaceEditor({
                     </div>
 
                     <div className="space-y-3">
-                      <div className="text-[10px] font-bold text-neutral-400 uppercase">Sugestões de Estilo</div>
+                      <div className="text-xs font-bold text-neutral-400 uppercase">Sugestões de Estilo</div>
                       {suggestions.map(s => (
                         <div key={s.id} className="bg-neutral-950 border border-neutral-850 p-4 rounded-xl space-y-2.5">
-                          <div className="flex justify-between items-center text-[10px]">
+                          <div className="flex justify-between items-center text-xs">
                             <span className="text-amber-400 uppercase font-mono font-bold">{s.type === 'cliche' ? 'Clichê Detectado' : 'Repetição'}</span>
                             <button 
                               onClick={() => setSuggestions(suggestions.filter(x => x.id !== s.id))}
@@ -2141,10 +2302,10 @@ export default function WorkspaceEditor({
                               Dispensar
                             </button>
                           </div>
-                          <p className="text-xs font-serif leading-relaxed text-neutral-300">
+                          <p className="text-sm font-serif leading-relaxed text-neutral-300">
                             {s.comment}
                           </p>
-                          <div className="flex justify-between items-center text-[10px] bg-neutral-900 p-2 rounded-lg border border-neutral-850">
+                          <div className="flex justify-between items-center text-xs bg-neutral-900 p-2 rounded-lg border border-neutral-850">
                             <span className="text-red-400 line-through">"{s.original}"</span>
                             <span className="text-emerald-400">"{s.replacement}"</span>
                           </div>
@@ -2159,19 +2320,19 @@ export default function WorkspaceEditor({
                   <div className="space-y-4 flex-1 overflow-y-auto text-neutral-300">
                     <button
                       onClick={createSnapshot}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold uppercase tracking-widest py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-widest py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <Plus size={13} /> Criar Novo Snapshot
+                      <Plus size={14} /> Criar Novo Snapshot
                     </button>
 
                     <div className="space-y-2.5">
                       {snapshots.map(snap => (
                         <div key={snap.id} className="bg-neutral-950 border border-neutral-850 p-3 rounded-xl flex justify-between items-center">
                           <div className="space-y-0.5">
-                            <h4 className="text-xs font-serif font-semibold text-white">{snap.title}</h4>
-                            <p className="text-[9px] text-neutral-500 font-mono">{snap.timestamp}</p>
+                            <h4 className="text-sm font-serif font-semibold text-white">{snap.title}</h4>
+                            <p className="text-xs text-neutral-500 font-mono">{snap.timestamp}</p>
                           </div>
-                          <span className="text-[9px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">{snap.charCount} caracteres</span>
+                          <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">{snap.charCount} caracteres</span>
                         </div>
                       ))}
                     </div>
@@ -2182,35 +2343,35 @@ export default function WorkspaceEditor({
                 {activeRightTool === 'search' && (
                   <div className="space-y-4 flex-1 overflow-y-auto text-neutral-300">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase text-neutral-400 block">Localizar</label>
+                      <label className="text-xs font-bold uppercase text-neutral-400 block">Localizar</label>
                       <input
                         type="text"
                         value={findText}
                         onChange={(e) => setFindText(e.target.value)}
                         placeholder="Palavra ou termo..."
-                        className="w-full text-xs border border-neutral-850 bg-neutral-950 text-white p-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full text-sm border border-neutral-850 bg-neutral-950 text-white p-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase text-neutral-400 block">Substituir por</label>
+                      <label className="text-xs font-bold uppercase text-neutral-400 block">Substituir por</label>
                       <input
                         type="text"
                         value={replaceText}
                         onChange={(e) => setReplaceText(e.target.value)}
                         placeholder="Nova palavra ou frase..."
-                        className="w-full text-xs border border-neutral-850 bg-neutral-950 text-white p-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full text-sm border border-neutral-850 bg-neutral-950 text-white p-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       />
                     </div>
 
-                    <div className="space-y-2 pt-2 text-[11px] font-sans">
+                    <div className="space-y-2 pt-2 text-xs font-sans">
                       <div className="flex items-center justify-between">
                         <span className="text-neutral-400">Diferenciar maiúsculas/minúsculas</span>
                         <input
                           type="checkbox"
                           checked={matchCase}
                           onChange={(e) => setMatchCase(e.target.checked)}
-                          className="rounded border-neutral-800 text-indigo-500 bg-neutral-950 w-3.5 h-3.5"
+                          className="rounded border-neutral-800 text-indigo-500 bg-neutral-950 w-4 h-4"
                         />
                       </div>
                       <div className="flex items-center justify-between">
@@ -2219,7 +2380,7 @@ export default function WorkspaceEditor({
                           type="checkbox"
                           checked={searchOnlyThisChapter}
                           onChange={(e) => setSearchOnlyThisChapter(e.target.checked)}
-                          className="rounded border-neutral-800 text-indigo-500 bg-neutral-950 w-3.5 h-3.5"
+                          className="rounded border-neutral-800 text-indigo-500 bg-neutral-950 w-4 h-4"
                         />
                       </div>
                     </div>
@@ -2227,7 +2388,7 @@ export default function WorkspaceEditor({
                     <button
                       onClick={executeFindAndReplace}
                       disabled={!findText}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-neutral-800 disabled:text-neutral-500 text-white text-[10px] font-bold uppercase tracking-widest py-2.5 rounded-xl transition-all mt-4 cursor-pointer"
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-neutral-800 disabled:text-neutral-500 text-white text-xs font-bold uppercase tracking-widest py-2.5 rounded-xl transition-all mt-4 cursor-pointer"
                     >
                       Substituir Ocorrências
                     </button>
@@ -2237,10 +2398,10 @@ export default function WorkspaceEditor({
                 {/* TAB CONTENT: Spellcheck */}
                 {activeRightTool === 'spell' && (
                   <div className="space-y-4 flex-1 overflow-y-auto text-neutral-300">
-                    <div className="flex items-center justify-between bg-neutral-900/60 p-3.5 border border-neutral-850 rounded-2xl text-xs">
+                    <div className="flex items-center justify-between bg-neutral-900/60 p-3.5 border border-neutral-850 rounded-2xl text-sm">
                       <div>
                         <span className="font-bold text-white block">Ativar Corretor</span>
-                        <span className="text-[9px] text-neutral-500">Exibir sublinhados ortográficos</span>
+                        <span className="text-xs text-neutral-500">Exibir sublinhados ortográficos</span>
                       </div>
                       <input
                         type="checkbox"
@@ -2251,13 +2412,13 @@ export default function WorkspaceEditor({
                     </div>
 
                     <div className="space-y-3">
-                      <div className="text-[10px] font-bold text-neutral-400 uppercase">Inconsistências Encontradas</div>
+                      <div className="text-xs font-bold text-neutral-400 uppercase">Inconsistências Encontradas</div>
                       {spellingActive ? (
                         <div className="space-y-2.5">
-                          <div className="bg-neutral-950 border border-neutral-850 p-3 rounded-xl text-xs space-y-1.5">
-                            <div className="text-[9px] text-red-400 font-mono uppercase font-bold">Erro de Concordância</div>
+                          <div className="bg-neutral-950 border border-neutral-850 p-3 rounded-xl text-sm space-y-1.5">
+                            <div className="text-xs text-red-400 font-mono uppercase font-bold">Erro de Concordância</div>
                             <p className="font-serif italic">"...setecentas palavras haviam sido confiadas..."</p>
-                            <span className="text-[10px] text-neutral-400 block mt-1">Concordância passiva correta. Nenhuma alteração solicitada.</span>
+                            <span className="text-xs text-neutral-400 block mt-1">Concordância passiva correta. Nenhuma alteração solicitada.</span>
                           </div>
                           <p className="text-sm text-neutral-400 text-center py-4">Tudo limpo por aqui! Seu manuscrito não possui falhas crassas.</p>
                         </div>
@@ -2268,33 +2429,93 @@ export default function WorkspaceEditor({
                   </div>
                 )}
 
-                {/* TAB CONTENT: Chapter Wastebin / Trash */}
-                {activeRightTool === 'trash' && (
-                  <div className="space-y-4 flex-1 overflow-y-auto text-neutral-300">
-                    <p className="text-xs text-neutral-400 leading-relaxed">Recupere capítulos excluídos acidentalmente neste manuscrito.</p>
-                    
-                    {deletedChapters.length > 0 ? (
-                      <div className="space-y-2">
-                        {deletedChapters.map(ch => (
-                          <div key={ch.id} className="bg-neutral-950 border border-neutral-850 p-3 rounded-xl flex justify-between items-center text-xs">
-                            <div className="overflow-hidden mr-2">
-                              <h4 className="font-serif font-bold text-white truncate">{ch.title}</h4>
-                              <p className="text-[9px] text-neutral-500 font-mono">Ordem: {ch.order}</p>
-                            </div>
-                            <button
-                              onClick={() => restoreChapter(ch)}
-                              className="text-indigo-400 hover:text-white shrink-0 font-bold font-sans text-[10px] uppercase bg-indigo-500/10 px-2 py-1 rounded"
+                {/* TAB CONTENT: Footnotes (Item 7) */}
+                {activeRightTool === 'footnotes' && (
+                  <div className="space-y-4 flex-1 overflow-y-auto text-neutral-700 dark:text-neutral-300 flex flex-col justify-start h-full pr-1">
+                    <p className="text-xs text-neutral-400 leading-relaxed text-left">
+                      Crie notas de rodapé estilo Scrivener. Elas são inseridas inline como marcadores {"[" + "^" + "X]"} e gerenciadas aqui.
+                    </p>
+
+                    {/* Insert Inline Footnote Form */}
+                    <div className="bg-[#f7f3f2] dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 text-left">
+                      <div className="text-xs font-bold text-neutral-400 uppercase">Inserir Nota de Rodapé</div>
+                      <textarea
+                        id="new-footnote-text"
+                        placeholder="Texto da nota de rodapé..."
+                        rows={3}
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-800 dark:text-white focus:outline-none resize-none"
+                      />
+                      <button
+                        onClick={() => {
+                          const textEl = document.getElementById('new-footnote-text') as HTMLTextAreaElement;
+                          if (!textEl || !textEl.value.trim() || !activeChapter) return;
+                          
+                          const chapterNotes = footnotes[activeChapter.id] || [];
+                          const nextNum = chapterNotes.length + 1;
+                          const marker = "[" + "^" + nextNum + "]";
+                          
+                          if (editor) {
+                            editor.commands.insertContent(marker);
+                            
+                            // Save footnote info
+                            setFootnotes(prev => ({
+                              ...prev,
+                              [activeChapter.id]: [
+                                ...chapterNotes,
+                                { id: `fn-${Date.now()}`, num: nextNum, text: textEl.value.trim() }
+                              ]
+                            }));
+                            
+                            textEl.value = '';
+                          } else {
+                            alert("Por favor, clique na área de escrita onde deseja inserir a nota.");
+                          }
+                        }}
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-xl transition-all cursor-pointer"
+                      >
+                        Inserir Notas inline {"[" + "^" + "]"}
+                      </button>
+                    </div>
+
+                    {/* Footnotes List */}
+                    <div className="space-y-3 mt-2 text-left flex-1 overflow-y-auto">
+                      <div className="text-xs font-bold text-neutral-450 uppercase">Notas deste Capítulo</div>
+                      {(footnotes[activeChapter?.id || ''] || []).map(fn => (
+                        <div key={fn.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 relative group shadow-sm">
+                          <div className="font-serif font-bold text-neutral-900 dark:text-white flex justify-between items-center">
+                            <span>Nota {"[" + "^"}{fn.num}{"]"}</span>
+                            <button 
+                              onClick={() => {
+                                setFootnotes(prev => ({
+                                  ...prev,
+                                  [activeChapter.id]: (prev[activeChapter.id] || []).filter(item => item.id !== fn.id)
+                                }));
+                              }}
+                              className="text-red-500 hover:text-red-750 text-xs font-semibold"
                             >
-                              Restaurar
+                              Remover
                             </button>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-10 border border-dashed border-neutral-800 text-neutral-500 text-xs rounded-xl">
-                        Nenhum capítulo na lixeira.
-                      </div>
-                    )}
+                          <textarea
+                            value={fn.text}
+                            rows={2}
+                            onChange={(e) => {
+                              const updatedText = e.target.value;
+                              setFootnotes(prev => ({
+                                ...prev,
+                                [activeChapter.id]: (prev[activeChapter.id] || []).map(item => 
+                                  item.id === fn.id ? { ...item, text: updatedText } : item
+                                )
+                              }));
+                            }}
+                            className="w-full bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-600 dark:text-neutral-300 focus:outline-none resize-none leading-relaxed"
+                          />
+                        </div>
+                      ))}
+                      {(!footnotes[activeChapter?.id || ''] || footnotes[activeChapter.id].length === 0) && (
+                        <div className="text-center py-8 text-neutral-500 text-xs italic font-sans">Nenhuma nota de rodapé neste capítulo.</div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -2303,7 +2524,7 @@ export default function WorkspaceEditor({
           )}
 
           {/* Collapsible right sidebar icon strip */}
-          <aside className="w-16 border-l border-neutral-900 bg-[#09090b] flex flex-col justify-between items-center py-4 shrink-0 select-none">
+          <aside className="w-16 border-l border-neutral-900 bg-[#f7f3f2] dark:bg-[#09090b] flex flex-col justify-between items-center py-4 shrink-0 select-none">
             {/* Top stack icons */}
             <div className="space-y-3.5 flex flex-col items-center">
               <button
@@ -2391,36 +2612,48 @@ export default function WorkspaceEditor({
               </button>
 
               <button
-                onClick={() => setActiveRightTool(activeRightTool === 'trash' ? null : 'trash')}
-                className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                  activeRightTool === 'trash'
-                    ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                    : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
-                }`}
-                title="Lixeira de Capítulos"
+                onClick={(e) => {
+                  if (activeChapter) {
+                    deleteChapter(activeChapter.id, e);
+                  }
+                }}
+                className="p-2 rounded-xl border border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900 transition-all cursor-pointer"
+                title="Excluir Capítulo Atual"
               >
                 <Trash2 size={18} />
               </button>
+
+              <button
+                onClick={() => setActiveRightTool(activeRightTool === 'footnotes' ? null : 'footnotes')}
+                className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                  activeRightTool === 'footnotes'
+                    ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+                    : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                }`}
+                title="Notas de Rodapé"
+              >
+                <BookMarked size={18} />
+              </button>
             </div>
 
-            {/* Bottom stack settings icons (Export/Download, Perfil/User) */}
+            {/* Bottom stack: exporter and editor settings */}
             <div className="space-y-3.5 flex flex-col items-center">
               {/* Diagramador e exportador */}
               <button
                 onClick={() => setShowExporterModal(true)}
-                className="p-2 rounded-xl text-indigo-400 hover:text-white hover:bg-neutral-900 border border-transparent transition-all cursor-pointer"
-                title="Diagramação & Exportação (Configurações do Editor)"
+                className="p-2 rounded-xl text-neutral-500 hover:text-white hover:bg-neutral-900 border border-transparent transition-all cursor-pointer"
+                title="Diagramação & Exportação"
               >
                 <Download size={18} />
               </button>
 
-              {/* Perfil */}
+              {/* Configurações do Editor (Engrenagem) */}
               <button
-                onClick={() => setShowProfileModal(true)}
-                className="p-2 rounded-xl text-indigo-400 hover:text-white hover:bg-neutral-900 border border-transparent transition-all cursor-pointer"
-                title="Configurações de Perfil de Autor"
+                onClick={() => setShowEditorSettingsModal(true)}
+                className="p-2 rounded-xl text-neutral-500 hover:text-white hover:bg-neutral-900 border border-transparent transition-all cursor-pointer"
+                title="Configurações do Editor (Fonte, Tamanho, etc.)"
               >
-                <User size={18} />
+                <Settings size={18} />
               </button>
             </div>
           </aside>
@@ -2430,10 +2663,10 @@ export default function WorkspaceEditor({
       {/* MODAL 1: EXPORTER / DIAGRAMADOR MODAL */}
       {showExporterModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#09090b] border border-neutral-850 rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
+          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
             
             {/* Header */}
-            <div className="px-6 py-4 border-b border-neutral-900 flex justify-between items-center bg-[#0c0c0e]">
+            <div className="px-6 py-4 border-b border-neutral-900 flex justify-between items-center bg-[#f7f3f2] dark:bg-[#0c0c0e]">
               <div className="flex items-center gap-2">
                 <BookMarked size={18} className="text-indigo-400" />
                 <span className="font-serif font-bold text-lg text-white">Configurações do Editor: Diagramador & Exportador</span>
@@ -2461,10 +2694,10 @@ export default function WorkspaceEditor({
       {/* MODAL 2: AUTHOR PROFILE BUILDER MODAL */}
       {showProfileModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#09090b] border border-neutral-850 rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
+          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
             
             {/* Header */}
-            <div className="px-6 py-4 border-b border-neutral-900 flex justify-between items-center bg-[#0c0c0e]">
+            <div className="px-6 py-4 border-b border-neutral-900 flex justify-between items-center bg-[#f7f3f2] dark:bg-[#0c0c0e]">
               <div className="flex items-center gap-2">
                 <User size={18} className="text-indigo-400" />
                 <span className="font-serif font-bold text-lg text-white">Configurações do Perfil de Autor</span>
@@ -2489,10 +2722,98 @@ export default function WorkspaceEditor({
         </div>
       )}
 
+      {/* MODAL 2.5: EDITOR DETAILS SETTINGS MODAL */}
+      {showEditorSettingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
+          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-3xl w-full max-w-md p-6 shadow-2xl relative space-y-4 text-left">
+            {/* Close Button */}
+            <button 
+              onClick={() => setShowEditorSettingsModal(false)}
+              className="absolute top-4 right-4 p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+            
+            <div className="flex items-center gap-2">
+              <Settings size={18} className="text-indigo-400" />
+              <h3 className="font-serif font-bold text-lg text-neutral-900 dark:text-white">Configurações do Editor</h3>
+            </div>
+
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              Ajuste as preferências de visualização da área de escrita do editor. Essas configurações alteram apenas a sua visualização local.
+            </p>
+
+            <div className="space-y-4 pt-2">
+              {/* Font Family Selection */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400">Família de Fonte</label>
+                <select
+                  value={settings.preferredFont}
+                  onChange={(e) => setSettings(prev => ({ ...prev, preferredFont: e.target.value as WritingSettings['preferredFont'] }))}
+                  className="text-sm border border-neutral-200 dark:border-neutral-850 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
+                >
+                  <option value="serif">Garamond (Clássica/Serifada)</option>
+                  <option value="sans">Inter (Moderna/Sem Serifas)</option>
+                  <option value="mono">JetBrains Mono (Espaçamento Único)</option>
+                </select>
+              </div>
+
+              {/* Font Size Selection */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400">Tamanho do Texto</label>
+                <select
+                  value={settings.fontSize}
+                  onChange={(e) => setSettings(prev => ({ ...prev, fontSize: e.target.value as WritingSettings['fontSize'] }))}
+                  className="text-sm border border-neutral-200 dark:border-neutral-850 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
+                >
+                  <option value="sm">Pequeno</option>
+                  <option value="md">Médio</option>
+                  <option value="lg">Grande</option>
+                  <option value="xl">Extra Grande</option>
+                </select>
+              </div>
+
+              {/* Layout Margins */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400">Margem do Editor</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { key: 'tight', name: 'Estreita' },
+                    { key: 'normal', name: 'Padrão' },
+                    { key: 'wide', name: 'Ampla' }
+                  ] as const).map((margin) => (
+                    <button
+                      key={margin.key}
+                      onClick={() => setSettings(prev => ({ ...prev, marginSize: margin.key }))}
+                      className={`py-2 px-3 text-xs border rounded-xl text-center transition-all cursor-pointer ${
+                        settings.marginSize === margin.key
+                          ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 font-bold'
+                          : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-850 text-neutral-600 dark:text-neutral-400'
+                      }`}
+                    >
+                      {margin.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setShowEditorSettingsModal(false)}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 rounded-xl transition-all cursor-pointer"
+              >
+                Salvar Configurações
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL 3: CREATE NEW BOARD MODAL */}
       {showNewBoardModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 relative">
+          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 relative">
             <button 
               onClick={() => setShowNewBoardModal(false)}
               className="absolute top-4 right-4 p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -2557,7 +2878,7 @@ export default function WorkspaceEditor({
       {/* MODAL 4: CREATE / EDIT PLANNING BLOCK MODAL */}
       {showCardModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 relative">
+          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 relative">
             <button 
               onClick={() => {
                 setShowCardModal(false);
@@ -2660,7 +2981,7 @@ export default function WorkspaceEditor({
       {/* MODAL 5: ADD PAGE WIZARD MODAL */}
       {showAddPageModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 relative">
+          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 relative">
             <button 
               onClick={() => setShowAddPageModal(false)}
               className="absolute top-4 right-4 p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -2768,9 +3089,9 @@ export default function WorkspaceEditor({
       {/* MODAL 6: TEMPLATES SELECTOR MODAL */}
       {showTemplatesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-4xl h-[75vh] flex overflow-hidden shadow-2xl relative animate-fade-in">
+          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-4xl h-[75vh] flex overflow-hidden shadow-2xl relative animate-fade-in">
             {/* Sidebar filter list */}
-            <div className="w-60 border-r border-neutral-900 bg-[#0c0c0e] p-5 flex flex-col gap-4 shrink-0">
+            <div className="w-60 border-r border-neutral-900 bg-[#f7f3f2] dark:bg-[#0c0c0e] p-5 flex flex-col gap-4 shrink-0">
               <h3 className="font-sans font-bold text-sm text-neutral-300 uppercase tracking-widest pl-1">Ativos / Assets</h3>
               
               <div className="relative">
@@ -2809,7 +3130,7 @@ export default function WorkspaceEditor({
             </div>
 
             {/* Right side templates list */}
-            <div className="flex-1 flex flex-col h-full bg-[#09090b]">
+            <div className="flex-1 flex flex-col h-full bg-[#f7f3f2] dark:bg-[#09090b]">
               <div className="flex justify-between items-center px-6 py-4 border-b border-neutral-900 select-none">
                 <span className="font-serif font-bold text-base text-white">
                   {templateFilter === 'all' ? 'Todos os Templates' : templateFilter}
@@ -2878,18 +3199,19 @@ export default function WorkspaceEditor({
       )}
       {/* MODAL 7: LIXEIRA GERAL MODAL */}
       {trashOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-white dark:bg-[#09090b] border border-neutral-200 dark:border-neutral-850 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl relative animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4">
+          <div className="bg-[#f7f3f2] dark:bg-[#0c0c0e] border border-neutral-200 dark:border-neutral-850 rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative animate-fade-in font-sans">
+            
             {/* Header */}
-            <div className="flex justify-between items-center px-6 py-4 border-b border-neutral-200 dark:border-neutral-900 select-none">
-              <span className="font-serif font-bold text-base text-neutral-900 dark:text-white flex items-center gap-2">
-                <Trash2 size={18} className="text-red-500" /> Lixeira Geral
-              </span>
+            <div className="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center select-none">
+              <h3 className="font-sans font-bold text-base uppercase tracking-wider flex items-center gap-2">
+                <Trash2 size={16} /> Lixeira do Livro
+              </h3>
               <button 
                 onClick={() => setTrashOpen(false)}
-                className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-850 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                className="text-white/80 hover:text-white transition-colors cursor-pointer"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
@@ -2897,36 +3219,39 @@ export default function WorkspaceEditor({
             <div className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
               {/* Deleted Chapters / Pages */}
               <div className="space-y-3">
-                <h3 className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Capítulos & Páginas Deletados</h3>
+                <h4 className="text-xs font-bold text-neutral-450 dark:text-neutral-500 uppercase tracking-widest">Capítulos Excluídos</h4>
                 {deletedChapters.length === 0 ? (
-                  <p className="text-xs text-neutral-400 italic">Nenhum capítulo na lixeira.</p>
+                  <div className="text-center py-6 border border-dashed border-neutral-300 dark:border-neutral-800 text-neutral-450 dark:text-neutral-550 text-xs rounded-xl font-sans italic">
+                    Nenhum capítulo na lixeira.
+                  </div>
                 ) : (
-                  <div className="divide-y divide-neutral-100 dark:divide-neutral-900">
+                  <div className="space-y-2">
                     {deletedChapters.map(chap => (
-                      <div key={chap.id} className="py-2.5 flex items-center justify-between">
-                        <div>
-                          <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">{chap.title}</span>
-                          <span className="text-[10px] text-neutral-400 dark:text-neutral-500 block">Tipo: Capítulo • Ordem: {chap.order}</span>
+                      <div key={chap.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-3.5 rounded-xl flex justify-between items-center text-sm shadow-sm transition-all hover:border-neutral-300 dark:hover:border-neutral-750">
+                        <div className="overflow-hidden mr-2">
+                          <h5 className="font-serif font-bold text-neutral-900 dark:text-white truncate">{chap.title}</h5>
+                          <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono mt-0.5">Ordem de escrita: {chap.order}</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           <button 
                             onClick={() => {
                               setChapters(prev => [...prev, chap].sort((a, b) => a.order - b.order));
                               setDeletedChapters(prev => prev.filter(c => c.id !== chap.id));
                             }}
-                            className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold px-2.5 py-1 rounded"
+                            className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-sans"
                           >
                             Restaurar
                           </button>
                           <button 
-                            onClick={() => {
-                              if (window.confirm("Excluir permanentemente?")) {
+                            onClick={async () => {
+                              const confirm = await customConfirm("Excluir Capítulo", `Deseja realmente apagar o capítulo "${chap.title}" permanentemente? Esta ação não pode ser desfeita.`);
+                              if (confirm) {
                                 setDeletedChapters(prev => prev.filter(c => c.id !== chap.id));
                               }
                             }}
-                            className="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-bold px-2.5 py-1 rounded"
+                            className="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-sans"
                           >
-                            Excluir Definitivo
+                            Excluir
                           </button>
                         </div>
                       </div>
@@ -2936,37 +3261,40 @@ export default function WorkspaceEditor({
               </div>
 
               {/* Deleted Planning Cards */}
-              <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-900">
-                <h3 className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Cards de Planejamento Deletados</h3>
+              <div className="space-y-3 pt-4 border-t border-neutral-200 dark:border-neutral-850">
+                <h4 className="text-xs font-bold text-neutral-450 dark:text-neutral-500 uppercase tracking-widest font-sans">Cards de Planejamento</h4>
                 {deletedPlanningCards.length === 0 ? (
-                  <p className="text-xs text-neutral-400 italic">Nenhum card na lixeira.</p>
+                  <div className="text-center py-6 border border-dashed border-neutral-300 dark:border-neutral-800 text-neutral-450 dark:text-neutral-550 text-xs rounded-xl font-sans italic">
+                    Nenhum card na lixeira.
+                  </div>
                 ) : (
-                  <div className="divide-y divide-neutral-100 dark:divide-neutral-900">
+                  <div className="space-y-2">
                     {deletedPlanningCards.map(card => (
-                      <div key={card.id} className="py-2.5 flex items-center justify-between">
-                        <div>
-                          <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">{card.title}</span>
-                          <p className="text-[10px] text-neutral-500 truncate max-w-sm">{card.content}</p>
+                      <div key={card.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-3.5 rounded-xl flex justify-between items-center text-sm shadow-sm transition-all hover:border-neutral-300 dark:hover:border-neutral-750">
+                        <div className="overflow-hidden mr-2 flex-1">
+                          <h5 className="font-serif font-bold text-neutral-900 dark:text-white truncate">{card.title}</h5>
+                          <p className="text-xs text-neutral-400 dark:text-neutral-500 truncate mt-0.5 max-w-[240px]">{card.content}</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           <button 
                             onClick={() => {
                               setPlanningCards(prev => [...prev, card]);
                               setDeletedPlanningCards(prev => prev.filter(c => c.id !== card.id));
                             }}
-                            className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold px-2.5 py-1 rounded"
+                            className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-sans"
                           >
                             Restaurar
                           </button>
                           <button 
-                            onClick={() => {
-                              if (window.confirm("Excluir card permanentemente?")) {
+                            onClick={async () => {
+                              const confirm = await customConfirm("Excluir Card", `Deseja realmente apagar o card "${card.title}" permanentemente? Esta ação não pode ser desfeita.`);
+                              if (confirm) {
                                 setDeletedPlanningCards(prev => prev.filter(c => c.id !== card.id));
                               }
                             }}
-                            className="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-bold px-2.5 py-1 rounded"
+                            className="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-sans"
                           >
-                            Excluir Definitivo
+                            Excluir
                           </button>
                         </div>
                       </div>
@@ -2978,6 +3306,339 @@ export default function WorkspaceEditor({
           </div>
         </div>
       )}
+
+      {/* MODAL 8: GLOBAL SEARCH OVERLAY */}
+      {globalSearchOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-start justify-center pt-24 px-4"
+          onClick={() => { setGlobalSearchOpen(false); setGlobalSearchQuery(''); }}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-neutral-950/70 backdrop-blur-sm" />
+
+          {/* Panel */}
+          <div
+            className="relative w-full max-w-xl bg-[#f7f3f2] dark:bg-[#0c0c0e] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl overflow-hidden animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Search input */}
+            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-neutral-200 dark:border-neutral-800">
+              <Search size={18} className="text-neutral-400 shrink-0" />
+              <input
+                type="text"
+                autoFocus
+                value={globalSearchQuery}
+                onChange={(e) => setGlobalSearchQuery(e.target.value)}
+                placeholder="Buscar capítulos, notas, quadros e mais..."
+                className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none"
+              />
+              {globalSearchQuery && (
+                <button
+                  onClick={() => setGlobalSearchQuery('')}
+                  className="text-neutral-400 hover:text-neutral-600 dark:hover:text-white transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* Results */}
+            <div className="max-h-80 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
+              {globalSearchQuery.trim() === '' ? (
+                <div className="px-4 py-8 text-center text-sm text-neutral-400">
+                  Digite para buscar em todo o seu projeto
+                </div>
+              ) : (() => {
+                const q = globalSearchQuery.toLowerCase();
+
+                const chapterResults = chapters.filter(ch =>
+                  ch.title.toLowerCase().includes(q) ||
+                  ch.content.toLowerCase().includes(q)
+                );
+
+                const noteResults = planningCards.filter(c =>
+                  pinnedCardsList.includes(c.id) &&
+                  (c.title.toLowerCase().includes(q) || c.content.toLowerCase().includes(q))
+                );
+
+                const boardResults = planningBoards.filter(b =>
+                  b.name.toLowerCase().includes(q) || b.description.toLowerCase().includes(q)
+                );
+
+                const total = chapterResults.length + noteResults.length + boardResults.length;
+
+                if (total === 0) {
+                  return (
+                    <div className="px-4 py-8 text-center text-sm text-neutral-400 italic">
+                      Nenhum resultado para &quot;{globalSearchQuery}&quot;
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    {chapterResults.length > 0 && (
+                      <div>
+                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-neutral-400 bg-neutral-50 dark:bg-neutral-900/50">
+                          Capítulos
+                        </div>
+                        {chapterResults.map(ch => {
+                          const idx = ch.content.toLowerCase().indexOf(q);
+                          const snippet = idx >= 0
+                            ? '...' + ch.content.slice(Math.max(0, idx - 30), idx + 60).replace(/\n/g, ' ') + '...'
+                            : '';
+                          return (
+                            <button
+                              key={ch.id}
+                              onClick={() => {
+                                setActiveChapterId(ch.id);
+                                setGlobalSearchOpen(false);
+                                setGlobalSearchQuery('');
+                              }}
+                              className="w-full text-left px-4 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors"
+                            >
+                              <div className="text-sm font-semibold text-neutral-900 dark:text-white">{ch.title}</div>
+                              {snippet && <div className="text-xs text-neutral-400 mt-0.5 truncate">{snippet}</div>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {noteResults.length > 0 && (
+                      <div>
+                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-neutral-400 bg-neutral-50 dark:bg-neutral-900/50">
+                          Notas Fixadas
+                        </div>
+                        {noteResults.map(c => (
+                          <button
+                            key={c.id}
+                            onClick={() => {
+                              setActiveRightTool('notes');
+                              setGlobalSearchOpen(false);
+                              setGlobalSearchQuery('');
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors"
+                          >
+                            <div className="text-sm font-semibold text-neutral-900 dark:text-white">{c.title}</div>
+                            <div className="text-xs text-neutral-400 mt-0.5 truncate">{c.content}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {boardResults.length > 0 && (
+                      <div>
+                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-neutral-400 bg-neutral-50 dark:bg-neutral-900/50">
+                          Quadros
+                        </div>
+                        {boardResults.map(b => (
+                          <button
+                            key={b.id}
+                            onClick={() => {
+                              setLeftTab('planning');
+                              setIsLeftPanelOpen(true);
+                              setActiveBoardId(b.id);
+                              setGlobalSearchOpen(false);
+                              setGlobalSearchQuery('');
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors"
+                          >
+                            <div className="text-sm font-semibold text-neutral-900 dark:text-white">{b.emoji} {b.name}</div>
+                            <div className="text-xs text-neutral-400 mt-0.5 truncate">{b.description}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Footer hint */}
+            <div className="px-4 py-2.5 border-t border-neutral-200 dark:border-neutral-800 flex gap-4 text-xs text-neutral-400">
+              <span><kbd className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-[10px]">Enter</kbd> para abrir</span>
+              <span><kbd className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-[10px]">Esc</kbd> para fechar</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 9: CUSTOM STYLED DIALOG (PROMPT / CONFIRM) */}
+      {dialogState.isOpen && (() => {
+        let inputValue = dialogState.defaultValue;
+        const isDeleteAction = dialogState.title.toLowerCase().includes('excluir') || dialogState.title.toLowerCase().includes('delete') || dialogState.title.toLowerCase().includes('remover') || dialogState.title.toLowerCase().includes('confirmar');
+        
+        return (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4">
+            <div className="bg-[#f7f3f2] dark:bg-[#0c0c0e] border border-neutral-200 dark:border-neutral-850 rounded-2xl w-full max-w-lg shadow-2xl relative overflow-hidden text-left animate-fade-in font-sans">
+              
+              {/* Header section */}
+              <div className={`${isDeleteAction ? 'bg-[#ef4444] text-white' : 'bg-indigo-600 text-white'} px-6 py-4 flex justify-between items-center`}>
+                <h3 className="font-sans font-bold text-lg leading-none">
+                  {dialogState.title}
+                </h3>
+                <button 
+                  onClick={dialogState.onCancel}
+                  className="text-white/80 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body message section */}
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed font-sans font-medium">
+                  {dialogState.message}
+                </p>
+
+                {dialogState.type === 'prompt' && (
+                  <div className="pt-1">
+                    <input
+                      type="text"
+                      defaultValue={dialogState.defaultValue}
+                      placeholder={dialogState.placeholder}
+                      autoFocus
+                      onChange={(e) => { inputValue = e.target.value; }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          dialogState.onConfirm(inputValue);
+                        }
+                      }}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-sm text-neutral-800 dark:text-white placeholder-neutral-450 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-sans"
+                    />
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    onClick={dialogState.onCancel}
+                    className="px-5 py-2.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg text-sm font-bold text-neutral-700 dark:text-neutral-350 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors cursor-pointer font-sans"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      dialogState.onConfirm(inputValue);
+                    }}
+                    className={`px-5 py-2.5 rounded-lg text-sm font-bold text-white transition-colors cursor-pointer font-sans ${isDeleteAction ? 'bg-[#ef4444] hover:bg-[#dc2626]' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                  >
+                    {isDeleteAction ? 'Delete' : 'Confirm'}
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* PLANNING CARD DETAILS MODAL OVERLAY (Item 3) */}
+      {activePlanningCardId && (() => {
+        const card = planningCards.find(c => c.id === activePlanningCardId);
+        if (!card) return null;
+        return (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4">
+            <div className="bg-[#f7f3f2] dark:bg-[#0c0c0e] border border-neutral-200 dark:border-neutral-850 rounded-2xl w-full max-w-2xl p-6 shadow-2xl relative space-y-4 text-left animate-fade-in">
+              <button 
+                onClick={() => setActivePlanningCardId(null)}
+                className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 dark:hover:text-white cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+              
+              <div className="space-y-1">
+                <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Editar Card de Planejamento</div>
+                <input 
+                  type="text" 
+                  value={card.title} 
+                  onChange={(e) => setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, title: e.target.value } : c))}
+                  className="w-full text-2xl font-bold font-serif text-neutral-900 dark:text-white bg-transparent border-none focus:outline-none p-0"
+                  placeholder="Título do card..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-450 dark:text-neutral-500">Descrição / Conteúdo</label>
+                <textarea 
+                  value={card.content} 
+                  rows={4}
+                  onChange={(e) => setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, content: e.target.value } : c))}
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-3 text-sm text-neutral-800 dark:text-white focus:outline-none leading-relaxed resize-none"
+                  placeholder="Digite o conteúdo do card..."
+                />
+              </div>
+
+              {/* Multiple Images Upload & Gallery */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-450 dark:text-neutral-500 block">Imagens anexadas</label>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {card.images && card.images.map((img, i) => (
+                    <div key={i} className="relative group/img w-24 h-16 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden shadow-sm">
+                      <img src={img} alt="Attached illustration" className="w-full h-full object-cover" />
+                      <button 
+                        onClick={() => {
+                          setPlanningCards(prev => prev.map(c => {
+                            if (c.id === card.id && c.images) {
+                              return { ...c, images: c.images.filter((_, idx) => idx !== i) };
+                            }
+                            return c;
+                          }));
+                        }}
+                        className="absolute inset-0 bg-red-600/70 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity font-bold text-xs"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+                  <button 
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.multiple = true;
+                      input.onchange = (e: any) => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          const readPromises = Array.from(files).map((file: any) => {
+                            return new Promise<string>((resolve) => {
+                              const reader = new FileReader();
+                              reader.onloadend = () => resolve(reader.result as string);
+                              reader.readAsDataURL(file);
+                            });
+                          });
+                          Promise.all(readPromises).then(base64Images => {
+                            setPlanningCards(prev => prev.map(c => {
+                              if (c.id === card.id) {
+                                return { ...c, images: [...(c.images || []), ...base64Images] };
+                              }
+                              return c;
+                            }));
+                          });
+                        }
+                      };
+                      input.click();
+                    }}
+                    className="w-24 h-16 border-2 border-dashed border-neutral-300 dark:border-neutral-800 hover:border-indigo-500 flex flex-col items-center justify-center text-neutral-400 hover:text-indigo-500 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <Plus size={16} />
+                    <span className="text-[9px] font-bold uppercase mt-1">Adicionar</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-3">
+                <button
+                  onClick={() => setActivePlanningCardId(null)}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-widest cursor-pointer shadow-md transition-colors"
+                >
+                  Salvar e Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

@@ -653,9 +653,13 @@ html.light .editor-workspace .text-neutral-900 {
   color: var(--on-surface) !important;
 }
 
-/* Standard white text in dark mode becomes dark neutral in light mode */
-html.light .editor-workspace .text-white {
+/* Standard white text in dark mode becomes dark neutral in light mode, except inside button elements */
+html.light .editor-workspace .text-white:not(button):not(button *) {
   color: var(--on-surface) !important;
+}
+html.light .editor-workspace button .text-white,
+html.light .editor-workspace button.text-white {
+  color: #ffffff !important;
 }
 
 /* Border overrides - soft warm border tones */
