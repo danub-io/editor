@@ -2,8 +2,8 @@ export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestContext } from "@cloudflare/next-on-pages";
-import { getDb } from "@/lib/db";
-import { projects } from "@/lib/schema";
+import { getDb } from "@gospelreads/db";
+import { projects } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB

@@ -1,8 +1,8 @@
 export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
-import { chapters } from "@/lib/schema";
+import { getDb } from "@gospelreads/db";
+import { chapters } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
 
 // PUT /api/chapters/[id]

@@ -1,8 +1,8 @@
 export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
-import { chapters, projects } from "@/lib/schema";
+import { getDb } from "@gospelreads/db";
+import { chapters, projects } from "@gospelreads/db";
 import { generateId } from "@/lib/utils";
 
 // GET /api/projects — List all projects
