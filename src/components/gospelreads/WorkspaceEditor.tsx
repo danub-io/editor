@@ -6,6 +6,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import { useEditorStore } from '@/stores/editorStore';
+
+import ExporterModal from './workspace/modals/ExporterModal';
+import ProfileModal from './workspace/modals/ProfileModal';
+import EditorSettingsModal from './workspace/modals/EditorSettingsModal';
+import AddPageWizardModal from './workspace/modals/AddPageWizardModal';
+
 import AnimatedThemeToggler from '@/registry/magicui/animated-theme-toggler';
 import { 
   Plus, 
@@ -2662,7 +2668,11 @@ export default function WorkspaceEditor() {
         </div>
       )}
 
-      {/* MODAL 1: EXPORTER / DIAGRAMADOR MODAL */}
+                              {/* MODAL 1: EXPORTER / DIAGRAMADOR MODAL */}
+      {showExporterModal && <ExporterModal onClose={() => setShowExporterModal(false)} />}
+
+      {showExporterModal && <ExporterModal onClose={() => setShowExporterModal(false)} />}
+
       {showExporterModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
           <div className="bg-surface dark:bg-surface border border-outline-variant rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
@@ -2693,7 +2703,11 @@ export default function WorkspaceEditor() {
         </div>
       )}
 
-      {/* MODAL 2: AUTHOR PROFILE BUILDER MODAL */}
+                              {/* MODAL 2: AUTHOR PROFILE BUILDER MODAL */}
+      {showProfileModal && <ProfileModal onClose={() => setShowProfileModal(false)} />}
+
+      {showProfileModal && <ProfileModal onClose={() => setShowProfileModal(false)} />}
+
       {showProfileModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
           <div className="bg-surface dark:bg-surface border border-outline-variant rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
@@ -2724,7 +2738,11 @@ export default function WorkspaceEditor() {
         </div>
       )}
 
-      {/* MODAL 2.5: EDITOR DETAILS SETTINGS MODAL */}
+                              {/* MODAL 2.5: EDITOR DETAILS SETTINGS MODAL */}
+      {showEditorSettingsModal && <EditorSettingsModal settings={settings} setSettings={setSettings} onClose={() => setShowEditorSettingsModal(false)} />}
+
+      {showEditorSettingsModal && <EditorSettingsModal settings={settings} setSettings={setSettings} onClose={() => setShowEditorSettingsModal(false)} />}
+
       {showEditorSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
           <div className="bg-surface dark:bg-surface border border-outline-variant rounded-3xl w-full max-w-md p-6 shadow-2xl relative space-y-4 text-left">
@@ -2980,7 +2998,11 @@ export default function WorkspaceEditor() {
         </div>
       )}
 
-      {/* MODAL 5: ADD PAGE WIZARD MODAL */}
+                              {/* MODAL 5: ADD PAGE WIZARD MODAL */}
+      {showAddPageModal && <AddPageWizardModal onClose={() => setShowAddPageModal(false)} />}
+
+      {showAddPageModal && <AddPageWizardModal onClose={() => setShowAddPageModal(false)} />}
+
       {showAddPageModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
           <div className="bg-surface dark:bg-surface border border-outline-variant rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 relative">
