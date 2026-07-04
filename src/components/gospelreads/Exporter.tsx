@@ -22,7 +22,7 @@ import { Chapter, WritingSettings } from './types';
 interface ExporterProps {
   chapters: Chapter[];
   settings: WritingSettings;
-  setSettings: React.Dispatch<React.SetStateAction<WritingSettings>>;
+  setSettings: (settings: WritingSettings | ((prev: WritingSettings) => WritingSettings)) => void;
 }
 
 type ExportType = 'pdf' | 'epub' | 'txt';

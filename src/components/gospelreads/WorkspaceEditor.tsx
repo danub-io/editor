@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from 'next-themes';
+import { useEditorStore } from '@/stores/editorStore';
 import AnimatedThemeToggler from '@/registry/magicui/animated-theme-toggler';
 import { 
   Plus, 
@@ -207,19 +208,20 @@ interface VersionSnapshot {
   charCount: number;
 }
 
-export default function WorkspaceEditor({
-  chapters,
-  setChapters,
-  activeChapterId,
-  setActiveChapterId,
-  settings,
-  setSettings,
-  profile,
-  setProfile,
-  books,
-  rightTab,
-  setRightTab
-}: WorkspaceEditorProps) {
+export default function WorkspaceEditor() {
+  const {
+    books,
+    chapters,
+    setChapters,
+    activeChapterId,
+    setActiveChapterId,
+    settings,
+    setSettings,
+    profile,
+    setProfile,
+    rightTab,
+    setRightTab
+  } = useEditorStore();
   // Navigation & UI layouts
   const [leftTab, setLeftTab] = useState<'manuscript' | 'planning' | 'characters' | 'locations' | 'events' | 'statistics'>('manuscript');
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
@@ -525,7 +527,7 @@ export default function WorkspaceEditor({
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       setSaveStatus('dirty');
-      setChapters(prev => prev.map(ch => ch.id === activeChapterId ? { ...ch, content: html } : ch));
+      setChapters((prev: Chapter[]) => prev.map(ch => ch.id === activeChapterId ? { ...ch, content: html } : ch));
       
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       setSaveStatus('saving');
@@ -554,7 +556,7 @@ export default function WorkspaceEditor({
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
-    setChapters(prev => prev.map(ch => {
+    setChapters((prev: Chapter[]) => prev.map(ch => {
       if (ch.id === activeChapterId) {
         return { ...ch, title: newTitle };
       }
@@ -603,7 +605,7 @@ export default function WorkspaceEditor({
   const triggerDeletePart = async (partId: string, partTitle: string) => {
     const confirm = await customConfirm("Excluir Parte", `Excluir a parte "${partTitle}"? Os capítulos desta parte voltarão para o nível principal.`);
     if (confirm) {
-      setChapters(prev => prev.map(c => c.partId === partId ? { ...c, partId: undefined } : c).filter(c => c.id !== partId));
+      setChapters((prev: Chapter[]) => prev.map(c => c.partId === partId ? { ...c, partId: undefined } : c).filter(c => c.id !== partId));
     }
   };
 
@@ -638,7 +640,7 @@ export default function WorkspaceEditor({
   };
 
   const restoreChapter = (ch: Chapter) => {
-    setChapters(prev => [...prev, ch]);
+    setChapters((prev: Chapter[]) => [...prev, ch]);
     setDeletedChapters(prev => prev.filter(c => c.id !== ch.id));
     setActiveChapterId(ch.id);
   };
@@ -738,10 +740,10 @@ export default function WorkspaceEditor({
     
     if (searchOnlyThisChapter) {
       const newContent = activeChapter.content.replace(regex, replaceText);
-      setChapters(prev => prev.map(ch => ch.id === activeChapterId ? { ...ch, content: newContent } : ch));
+      setChapters((prev: Chapter[]) => prev.map(ch => ch.id === activeChapterId ? { ...ch, content: newContent } : ch));
       alert('Substituição realizada com sucesso no capítulo atual.');
     } else {
-      setChapters(prev => prev.map(ch => {
+      setChapters((prev: Chapter[]) => prev.map(ch => {
         const updatedContent = ch.content.replace(regex, replaceText);
         return { ...ch, content: updatedContent };
       }));
@@ -997,11 +999,11 @@ export default function WorkspaceEditor({
       className={`group flex items-center justify-between p-2.5 cursor-pointer border rounded-xl cursor-grab active:cursor-grabbing ${
         ch.id === activeChapterId 
           ? 'border-indigo-500 bg-indigo-500/10 font-medium text-indigo-300' 
-          : 'border-transparent text-neutral-400 hover:border-neutral-850 hover:bg-neutral-900/40 hover:text-neutral-200'
+          : 'border-transparent text-on-surface-variant hover:border-outline-variant hover:bg-surface-container-lowest/40 hover:text-on-surface'
       } transition-all duration-150`}
     >
       <div className="flex items-center gap-2 overflow-hidden">
-        <span className="text-[11px] font-mono text-neutral-500 shrink-0">#{idx + 1}</span>
+        <span className="text-[11px] font-mono text-on-surface-variant shrink-0">#{idx + 1}</span>
         <span className="text-sm truncate font-serif">{ch.title || 'Sem título'}</span>
       </div>
       
@@ -1009,7 +1011,7 @@ export default function WorkspaceEditor({
         <button 
           onClick={(e) => { e.stopPropagation(); moveChapterInSection(ch.id, 'up'); }}
           disabled={idx === 0}
-          className="p-0.5 hover:bg-neutral-800 text-neutral-400 hover:text-neutral-200 rounded disabled:opacity-30"
+          className="p-0.5 hover:bg-neutral-800 text-on-surface-variant hover:text-on-surface rounded disabled:opacity-30"
           title="Subir"
         >
           <ChevronUp size={12} />
@@ -1017,7 +1019,7 @@ export default function WorkspaceEditor({
         <button 
           onClick={(e) => { e.stopPropagation(); moveChapterInSection(ch.id, 'down'); }}
           disabled={idx === arr.length - 1}
-          className="p-0.5 hover:bg-neutral-800 text-neutral-400 hover:text-neutral-200 rounded disabled:opacity-30"
+          className="p-0.5 hover:bg-neutral-800 text-on-surface-variant hover:text-on-surface rounded disabled:opacity-30"
           title="Descer"
         >
           <ChevronDown size={12} />
@@ -1037,11 +1039,11 @@ export default function WorkspaceEditor({
   const [activeRightTool, setActiveRightTool] = useState<string | null>(null);
 
   return (
-    <div className="w-full flex bg-[#f7f3f2] dark:bg-[#09090b] h-screen max-h-screen overflow-hidden relative editor-workspace">
+    <div className="w-full flex bg-surface dark:bg-surface h-screen max-h-screen overflow-hidden relative editor-workspace">
       
       {/* COLLAPSIBLE LEFT SIDEBAR ICON STRIP */}
       {!isDistractionFree && (
-        <aside className="w-16 border-r border-neutral-900 bg-[#f7f3f2] dark:bg-[#09090b] flex flex-col justify-between items-center py-4 shrink-0 select-none hidden lg:flex">
+        <aside className="w-16 border-r border-outline-variant bg-surface dark:bg-surface flex flex-col justify-between items-center py-4 shrink-0 select-none hidden lg:flex">
           {/* Top: manuscript + planning only */}
           <div className="space-y-3.5 flex flex-col items-center">
             <button
@@ -1056,7 +1058,7 @@ export default function WorkspaceEditor({
               className={`p-2 rounded-xl border transition-all cursor-pointer ${
                 leftTab === 'manuscript' && isLeftPanelOpen
                   ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                  : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                  : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
               }`}
               title="Manuscrito"
             >
@@ -1075,7 +1077,7 @@ export default function WorkspaceEditor({
               className={`p-2 rounded-xl border transition-all cursor-pointer ${
                 leftTab === 'planning'
                   ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                  : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                  : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
               }`}
               title="Planejamento"
             >
@@ -1107,7 +1109,7 @@ export default function WorkspaceEditor({
               className={`p-2 rounded-xl border transition-all cursor-pointer ${
                 globalSearchOpen
                   ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                  : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                  : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
               }`}
               title="Busca global"
             >
@@ -1120,7 +1122,7 @@ export default function WorkspaceEditor({
               className={`p-2 rounded-xl border transition-all cursor-pointer ${
                 trashOpen
                   ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                  : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                  : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
               }`}
               title="Lixeira"
             >
@@ -1140,12 +1142,12 @@ export default function WorkspaceEditor({
 
       {/* LEFT SIDEBAR: MANUSCRITO OR PLANEJAMENTO */}
       {!isDistractionFree && isLeftPanelOpen && (
-        <aside className="w-80 border-r border-neutral-200 dark:border-neutral-900 bg-[#f7f3f2] dark:bg-[#0c0c0e] flex flex-col justify-between shrink-0 hidden lg:flex select-none">
+        <aside className="w-80 border-r border-neutral-200 dark:border-outline-variant bg-surface dark:bg-[#0c0c0e] flex flex-col justify-between shrink-0 hidden lg:flex select-none">
           <div className="flex flex-col h-full overflow-hidden">
             
             {/* Sidebar Title Header with Close Button */}
-            <div className="p-4 border-b border-neutral-200 dark:border-neutral-900 flex items-center justify-between gap-3 bg-[#f7f3f2] dark:bg-[#09090b]">
-              <span className="text-xs font-bold uppercase tracking-widest text-neutral-400 font-sans select-none">
+            <div className="p-4 border-b border-neutral-200 dark:border-outline-variant flex items-center justify-between gap-3 bg-surface dark:bg-surface">
+              <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant font-sans select-none">
                 {leftTab === 'manuscript' && 'Manuscrito'}
                 {leftTab === 'planning' && 'Quadro de Plotagem'}
                 {leftTab === 'characters' && 'Personagens'}
@@ -1155,7 +1157,7 @@ export default function WorkspaceEditor({
               </span>
               <button 
                 onClick={() => setIsLeftPanelOpen(false)} 
-                className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-xl transition-colors cursor-pointer"
+                className="p-1.5 hover:bg-neutral-800 text-on-surface-variant hover:text-white rounded-xl transition-colors cursor-pointer"
                 title="Recolher Painel"
               >
                 <X size={14} />
@@ -1171,7 +1173,7 @@ export default function WorkspaceEditor({
                       <span className="text-xs font-bold tracking-widest text-indigo-400 uppercase flex items-center gap-2">
                         <FolderOpen size={13} /> Estrutura ({chapters.length} Caps)
                       </span>
-                      <span className="flex items-center gap-1 text-[10px] text-neutral-500 font-mono">
+                      <span className="flex items-center gap-1 text-[10px] text-on-surface-variant font-mono">
                         <span className={`w-1 h-1 rounded-full ${
                           saveStatus === 'saved' ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]' :
                           saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' : 'bg-gray-500'
@@ -1185,7 +1187,7 @@ export default function WorkspaceEditor({
                   <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
                     {/* 1. FRONT MATTER SECTION */}
                     <div className="space-y-1">
-                      <div className="text-[11px] font-bold uppercase tracking-widest text-neutral-500 pl-1 py-1 border-b border-neutral-900 flex items-center justify-between select-none">
+                      <div className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant pl-1 py-1 border-b border-outline-variant flex items-center justify-between select-none">
                         <span>Páginas Iniciais</span>
                         <button 
                           onClick={triggerAddFrontPage}
@@ -1200,7 +1202,7 @@ export default function WorkspaceEditor({
                           .sort((a, b) => a.order - b.order)
                           .map((ch, idx, arr) => renderManuscriptItem(ch, idx, arr))}
                         {chapters.filter(ch => ch.section === 'front').length === 0 && (
-                          <div className="text-xs text-neutral-500 pl-2 italic">Nenhuma página inicial</div>
+                          <div className="text-xs text-on-surface-variant pl-2 italic">Nenhuma página inicial</div>
                         )}
                       </div>
                     </div>
@@ -1213,10 +1215,10 @@ export default function WorkspaceEditor({
                           const chapterId = e.dataTransfer.getData('text/plain');
                           const dragType = e.dataTransfer.getData('dragType');
                           if (dragType === 'chapter' && chapterId) {
-                            setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, partId: undefined } : c));
+                            setChapters((prev: Chapter[]) => prev.map(c => c.id === chapterId ? { ...c, partId: undefined } : c));
                           }
                         }}
-                        className="text-[11px] font-bold uppercase tracking-widest text-neutral-500 pl-1 py-1 border-b border-neutral-900 flex items-center justify-between select-none"
+                        className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant pl-1 py-1 border-b border-outline-variant flex items-center justify-between select-none"
                       >
                         <span>Conteúdo Principal</span>
                         <button 
@@ -1247,15 +1249,15 @@ export default function WorkspaceEditor({
                                       const chapterId = e.dataTransfer.getData('text/plain');
                                       const dragType = e.dataTransfer.getData('dragType');
                                       if (dragType === 'chapter' && chapterId && chapterId !== part.id) {
-                                        setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, partId: part.id } : c));
+                                        setChapters((prev: Chapter[]) => prev.map(c => c.id === chapterId ? { ...c, partId: part.id } : c));
                                       }
                                     }}
-                                    className="bg-neutral-900/30 border border-neutral-850 rounded-xl p-2.5 space-y-2"
+                                    className="bg-surface-container-lowest/30 border border-outline-variant rounded-xl p-2.5 space-y-2"
                                   >
-                                    <div className="flex justify-between items-center select-none border-b border-neutral-800 pb-1.5">
+                                    <div className="flex justify-between items-center select-none border-b border-outline-variant pb-1.5">
                                       <span 
                                         onClick={() => setActiveChapterId(part.id)}
-                                        className={`text-sm font-bold text-neutral-200 flex items-center gap-1.5 cursor-pointer hover:text-indigo-400 transition-colors ${
+                                        className={`text-sm font-bold text-on-surface flex items-center gap-1.5 cursor-pointer hover:text-indigo-400 transition-colors ${
                                           part.id === activeChapterId ? 'text-indigo-400 font-semibold' : ''
                                         }`}
                                       >
@@ -1274,7 +1276,7 @@ export default function WorkspaceEditor({
                                             e.stopPropagation();
                                             triggerDeletePart(part.id, part.title);
                                           }}
-                                          className="text-neutral-500 hover:text-red-400 cursor-pointer"
+                                          className="text-on-surface-variant hover:text-red-400 cursor-pointer"
                                           title="Excluir parte"
                                         >
                                           <Trash2 size={11} />
@@ -1282,7 +1284,7 @@ export default function WorkspaceEditor({
                                       </div>
                                     </div>
                                     
-                                    <div className="space-y-1 pl-3.5 border-l border-neutral-800">
+                                    <div className="space-y-1 pl-3.5 border-l border-outline-variant">
                                       {partChapters.map((ch, idx, arr) => renderManuscriptItem(ch, idx, arr))}
                                       {partChapters.length === 0 && (
                                         <div className="text-[10px] text-neutral-600 italic select-none py-1">Arraste capítulos aqui</div>
@@ -1298,7 +1300,7 @@ export default function WorkspaceEditor({
                               </div>
 
                               {bodyItems.length === 0 && (
-                                <div className="text-xs text-neutral-500 pl-2 italic">Nenhum capítulo ou parte criada</div>
+                                <div className="text-xs text-on-surface-variant pl-2 italic">Nenhum capítulo ou parte criada</div>
                               )}
                             </div>
                           );
@@ -1308,7 +1310,7 @@ export default function WorkspaceEditor({
 
                     {/* 3. BACK MATTER SECTION */}
                     <div className="space-y-1">
-                      <div className="text-[11px] font-bold uppercase tracking-widest text-neutral-500 pl-1 py-1 border-b border-neutral-900 flex items-center justify-between select-none">
+                      <div className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant pl-1 py-1 border-b border-outline-variant flex items-center justify-between select-none">
                         <span>Páginas Finais</span>
                         <button 
                           onClick={triggerAddBackPage}
@@ -1323,7 +1325,7 @@ export default function WorkspaceEditor({
                           .sort((a, b) => a.order - b.order)
                           .map((ch, idx, arr) => renderManuscriptItem(ch, idx, arr))}
                         {chapters.filter(ch => ch.section === 'back').length === 0 && (
-                          <div className="text-xs text-neutral-500 pl-2 italic">Nenhuma página final</div>
+                          <div className="text-xs text-on-surface-variant pl-2 italic">Nenhuma página final</div>
                         )}
                       </div>
                     </div>
@@ -1339,7 +1341,7 @@ export default function WorkspaceEditor({
                   <span className="text-sm font-bold tracking-widest text-indigo-400 uppercase flex items-center gap-1.5 font-sans">
                     <Layout size={14} /> Quadro de Plotagem
                   </span>
-                  <p className="text-xs text-neutral-500 font-mono">Três Atos</p>
+                  <p className="text-xs text-on-surface-variant font-mono">Três Atos</p>
                 </div>
 
                 {/* Column lists (vertical mini bento stacks) */}
@@ -1348,9 +1350,9 @@ export default function WorkspaceEditor({
                   <div 
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, 'ato1')}
-                    className="bg-neutral-900/40 p-3 border border-neutral-850 rounded-2xl space-y-2 min-h-[120px] transition-all"
+                    className="bg-surface-container-lowest/40 p-3 border border-outline-variant rounded-2xl space-y-2 min-h-[120px] transition-all"
                   >
-                    <div className="flex justify-between items-center border-b border-neutral-800 pb-1">
+                    <div className="flex justify-between items-center border-b border-outline-variant pb-1">
                       <span className="text-sm font-bold text-white uppercase font-serif">Ato I: Partida</span>
                       <button onClick={() => addPlanningCard('ato1')} className="text-indigo-400 hover:text-white cursor-pointer">
                         <PlusCircle size={14} />
@@ -1362,11 +1364,11 @@ export default function WorkspaceEditor({
                           key={card.id} 
                           draggable
                           onDragStart={(e) => handleDragStart(e, card.id)}
-                          className="bg-neutral-950 border border-neutral-800 p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
+                          className="bg-neutral-950 border border-outline-variant p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
                         >
                           <div className="font-serif font-semibold text-white pr-4">{card.title}</div>
-                          <p className="text-neutral-400 text-sm leading-normal font-sans">{card.content}</p>
-                          <div className="flex justify-between items-center pt-1 border-t border-neutral-850/50 mt-1.5">
+                          <p className="text-on-surface-variant text-sm leading-normal font-sans">{card.content}</p>
+                          <div className="flex justify-between items-center pt-1 border-t border-outline-variant/50 mt-1.5">
                             <span className="text-[10px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Estrutura'}</span>
                             <button onClick={() => deletePlanningCard(card.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
                               <Trash2 size={11} />
@@ -1375,7 +1377,7 @@ export default function WorkspaceEditor({
                         </div>
                       ))}
                       {planningCards.filter(c => c.column === 'ato1').length === 0 && (
-                        <div className="text-center py-4 text-neutral-500 text-xs font-sans italic">Arrastar cards aqui</div>
+                        <div className="text-center py-4 text-on-surface-variant text-xs font-sans italic">Arrastar cards aqui</div>
                       )}
                     </div>
                   </div>
@@ -1384,9 +1386,9 @@ export default function WorkspaceEditor({
                   <div 
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, 'ato2')}
-                    className="bg-neutral-900/40 p-3 border border-neutral-850 rounded-2xl space-y-2 min-h-[120px] transition-all"
+                    className="bg-surface-container-lowest/40 p-3 border border-outline-variant rounded-2xl space-y-2 min-h-[120px] transition-all"
                   >
-                    <div className="flex justify-between items-center border-b border-neutral-800 pb-1">
+                    <div className="flex justify-between items-center border-b border-outline-variant pb-1">
                       <span className="text-sm font-bold text-white uppercase font-serif">Ato II: Confronto</span>
                       <button onClick={() => addPlanningCard('ato2')} className="text-indigo-400 hover:text-white cursor-pointer">
                         <PlusCircle size={14} />
@@ -1398,11 +1400,11 @@ export default function WorkspaceEditor({
                           key={card.id} 
                           draggable
                           onDragStart={(e) => handleDragStart(e, card.id)}
-                          className="bg-neutral-950 border border-neutral-800 p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
+                          className="bg-neutral-950 border border-outline-variant p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
                         >
                           <div className="font-serif font-semibold text-white pr-4">{card.title}</div>
-                          <p className="text-neutral-400 text-sm leading-normal font-sans">{card.content}</p>
-                          <div className="flex justify-between items-center pt-1 border-t border-neutral-850/50 mt-1.5">
+                          <p className="text-on-surface-variant text-sm leading-normal font-sans">{card.content}</p>
+                          <div className="flex justify-between items-center pt-1 border-t border-outline-variant/50 mt-1.5">
                             <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Trama'}</span>
                             <button onClick={() => deletePlanningCard(card.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
                               <Trash2 size={11} />
@@ -1411,7 +1413,7 @@ export default function WorkspaceEditor({
                         </div>
                       ))}
                       {planningCards.filter(c => c.column === 'ato2').length === 0 && (
-                        <div className="text-center py-4 text-neutral-500 text-xs font-sans italic">Arrastar cards aqui</div>
+                        <div className="text-center py-4 text-on-surface-variant text-xs font-sans italic">Arrastar cards aqui</div>
                       )}
                     </div>
                   </div>
@@ -1420,9 +1422,9 @@ export default function WorkspaceEditor({
                   <div 
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, 'ato3')}
-                    className="bg-neutral-900/40 p-3 border border-neutral-850 rounded-2xl space-y-2 min-h-[120px] transition-all"
+                    className="bg-surface-container-lowest/40 p-3 border border-outline-variant rounded-2xl space-y-2 min-h-[120px] transition-all"
                   >
-                    <div className="flex justify-between items-center border-b border-neutral-800 pb-1">
+                    <div className="flex justify-between items-center border-b border-outline-variant pb-1">
                       <span className="text-sm font-bold text-white uppercase font-serif">Ato III: Resolução</span>
                       <button onClick={() => addPlanningCard('ato3')} className="text-indigo-400 hover:text-white cursor-pointer">
                         <PlusCircle size={14} />
@@ -1434,11 +1436,11 @@ export default function WorkspaceEditor({
                           key={card.id} 
                           draggable
                           onDragStart={(e) => handleDragStart(e, card.id)}
-                          className="bg-neutral-950 border border-neutral-800 p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
+                          className="bg-neutral-950 border border-outline-variant p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
                         >
                           <div className="font-serif font-semibold text-white pr-4">{card.title}</div>
-                          <p className="text-neutral-400 text-sm leading-normal font-sans">{card.content}</p>
-                          <div className="flex justify-between items-center pt-1 border-t border-neutral-850/50 mt-1.5">
+                          <p className="text-on-surface-variant text-sm leading-normal font-sans">{card.content}</p>
+                          <div className="flex justify-between items-center pt-1 border-t border-outline-variant/50 mt-1.5">
                             <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Clímax'}</span>
                             <button onClick={() => deletePlanningCard(card.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
                               <Trash2 size={11} />
@@ -1447,7 +1449,7 @@ export default function WorkspaceEditor({
                         </div>
                       ))}
                       {planningCards.filter(c => c.column === 'ato3').length === 0 && (
-                        <div className="text-center py-4 text-neutral-500 text-xs font-sans italic">Arrastar cards aqui</div>
+                        <div className="text-center py-4 text-on-surface-variant text-xs font-sans italic">Arrastar cards aqui</div>
                       )}
                     </div>
                   </div>
@@ -1482,7 +1484,7 @@ export default function WorkspaceEditor({
                   {planningBlocks.filter(b => b.type === 'character').map(block => (
                     <div 
                       key={block.id}
-                      className="bg-neutral-900/40 border border-neutral-850 p-4 rounded-2xl hover:border-indigo-500/50 transition-all cursor-pointer group relative flex flex-col justify-between space-y-2"
+                      className="bg-surface-container-lowest/40 border border-outline-variant p-4 rounded-2xl hover:border-indigo-500/50 transition-all cursor-pointer group relative flex flex-col justify-between space-y-2"
                       onClick={() => handleOpenEditCard(block)}
                     >
                       <div className="flex items-start justify-between">
@@ -1490,7 +1492,7 @@ export default function WorkspaceEditor({
                           <span className="text-2xl">{block.emoji || '👤'}</span>
                           <div className="text-left">
                             <h4 className="font-serif font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{block.title}</h4>
-                            <p className="text-sm text-neutral-400 font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
+                            <p className="text-sm text-on-surface-variant font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
                           </div>
                         </div>
                         <button 
@@ -1500,7 +1502,7 @@ export default function WorkspaceEditor({
                               setPlanningBlocks(prev => prev.filter(b => b.id !== block.id));
                             }
                           }}
-                          className="opacity-0 group-hover:opacity-100 text-neutral-500 hover:text-red-400 transition-all p-1 cursor-pointer"
+                          className="opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-red-400 transition-all p-1 cursor-pointer"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -1509,7 +1511,7 @@ export default function WorkspaceEditor({
                   ))}
 
                   {planningBlocks.filter(b => b.type === 'character').length === 0 && (
-                    <div className="text-center py-8 text-neutral-500 font-sans text-xs">
+                    <div className="text-center py-8 text-on-surface-variant font-sans text-xs">
                       Nenhum personagem criado. Clique em "+ Personagem" para começar.
                     </div>
                   )}
@@ -1544,7 +1546,7 @@ export default function WorkspaceEditor({
                   {planningBlocks.filter(b => b.type === 'location').map(block => (
                     <div 
                       key={block.id}
-                      className="bg-neutral-900/40 border border-neutral-850 p-4 rounded-2xl hover:border-indigo-500/50 transition-all cursor-pointer group relative flex flex-col justify-between space-y-2"
+                      className="bg-surface-container-lowest/40 border border-outline-variant p-4 rounded-2xl hover:border-indigo-500/50 transition-all cursor-pointer group relative flex flex-col justify-between space-y-2"
                       onClick={() => handleOpenEditCard(block)}
                     >
                       <div className="flex items-start justify-between">
@@ -1552,7 +1554,7 @@ export default function WorkspaceEditor({
                           <span className="text-2xl">{block.emoji || '📍'}</span>
                           <div className="text-left">
                             <h4 className="font-serif font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{block.title}</h4>
-                            <p className="text-sm text-neutral-400 font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
+                            <p className="text-sm text-on-surface-variant font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
                           </div>
                         </div>
                         <button 
@@ -1562,7 +1564,7 @@ export default function WorkspaceEditor({
                               setPlanningBlocks(prev => prev.filter(b => b.id !== block.id));
                             }
                           }}
-                          className="opacity-0 group-hover:opacity-100 text-neutral-500 hover:text-red-400 transition-all p-1 cursor-pointer"
+                          className="opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-red-400 transition-all p-1 cursor-pointer"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -1571,7 +1573,7 @@ export default function WorkspaceEditor({
                   ))}
 
                   {planningBlocks.filter(b => b.type === 'location').length === 0 && (
-                    <div className="text-center py-8 text-neutral-500 font-sans text-xs">
+                    <div className="text-center py-8 text-on-surface-variant font-sans text-xs">
                       Nenhum local criado. Clique em "+ Local" para começar.
                     </div>
                   )}
@@ -1606,7 +1608,7 @@ export default function WorkspaceEditor({
                   {planningBlocks.filter(b => b.type === 'event').map(block => (
                     <div 
                       key={block.id}
-                      className="bg-neutral-900/40 border border-neutral-850 p-4 rounded-2xl hover:border-indigo-500/50 transition-all cursor-pointer group relative flex flex-col justify-between space-y-2"
+                      className="bg-surface-container-lowest/40 border border-outline-variant p-4 rounded-2xl hover:border-indigo-500/50 transition-all cursor-pointer group relative flex flex-col justify-between space-y-2"
                       onClick={() => handleOpenEditCard(block)}
                     >
                       <div className="flex items-start justify-between">
@@ -1614,7 +1616,7 @@ export default function WorkspaceEditor({
                           <span className="text-2xl">{block.emoji || '📅'}</span>
                           <div className="text-left">
                             <h4 className="font-serif font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{block.title}</h4>
-                            <p className="text-sm text-neutral-400 font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
+                            <p className="text-sm text-on-surface-variant font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
                           </div>
                         </div>
                         <button 
@@ -1624,7 +1626,7 @@ export default function WorkspaceEditor({
                               setPlanningBlocks(prev => prev.filter(b => b.id !== block.id));
                             }
                           }}
-                          className="opacity-0 group-hover:opacity-100 text-neutral-500 hover:text-red-400 transition-all p-1 cursor-pointer"
+                          className="opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-red-400 transition-all p-1 cursor-pointer"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -1633,7 +1635,7 @@ export default function WorkspaceEditor({
                   ))}
 
                   {planningBlocks.filter(b => b.type === 'event').length === 0 && (
-                    <div className="text-center py-8 text-neutral-500 font-sans text-xs">
+                    <div className="text-center py-8 text-on-surface-variant font-sans text-xs">
                       Nenhum evento criado. Clique em "+ Evento" para começar.
                     </div>
                   )}
@@ -1651,34 +1653,34 @@ export default function WorkspaceEditor({
 
                   {/* Statistics Grid */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-neutral-900/60 border border-neutral-850 p-3 rounded-2xl">
-                      <div className="text-[11px] text-neutral-500 uppercase tracking-wider font-mono">Capítulo</div>
+                    <div className="bg-surface-container-lowest/60 border border-outline-variant p-3 rounded-2xl">
+                      <div className="text-[11px] text-on-surface-variant uppercase tracking-wider font-mono">Capítulo</div>
                       <div className="text-xl font-bold font-serif text-white mt-1">{activeWords} pal.</div>
                     </div>
-                    <div className="bg-neutral-900/60 border border-neutral-850 p-3 rounded-2xl">
-                      <div className="text-[11px] text-neutral-500 uppercase tracking-wider font-mono">Livro</div>
+                    <div className="bg-surface-container-lowest/60 border border-outline-variant p-3 rounded-2xl">
+                      <div className="text-[11px] text-on-surface-variant uppercase tracking-wider font-mono">Livro</div>
                       <div className="text-xl font-bold font-serif text-white mt-1">{totalWords} pal.</div>
                     </div>
-                    <div className="bg-neutral-900/60 border border-neutral-850 p-3 rounded-2xl">
-                      <div className="text-[11px] text-neutral-500 uppercase tracking-wider font-mono">Caracteres</div>
+                    <div className="bg-surface-container-lowest/60 border border-outline-variant p-3 rounded-2xl">
+                      <div className="text-[11px] text-on-surface-variant uppercase tracking-wider font-mono">Caracteres</div>
                       <div className="text-xl font-bold font-serif text-white mt-1">{totalChars}</div>
                     </div>
-                    <div className="bg-neutral-900/60 border border-neutral-850 p-3 rounded-2xl">
-                      <div className="text-[11px] text-neutral-500 uppercase tracking-wider font-mono">Estrutura</div>
+                    <div className="bg-surface-container-lowest/60 border border-outline-variant p-3 rounded-2xl">
+                      <div className="text-[11px] text-on-surface-variant uppercase tracking-wider font-mono">Estrutura</div>
                       <div className="text-xl font-bold font-serif text-white mt-1">{chapters.length} Caps</div>
                     </div>
                   </div>
 
                   {/* Typography Panel */}
-                  <div className="space-y-3 border-t border-neutral-900 pt-4">
-                    <div className="text-[11px] text-neutral-500 uppercase tracking-wider font-mono">Configuração de Texto</div>
+                  <div className="space-y-3 border-t border-outline-variant pt-4">
+                    <div className="text-[11px] text-on-surface-variant uppercase tracking-wider font-mono">Configuração de Texto</div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] text-neutral-500">Fonte</span>
+                        <span className="text-[10px] text-on-surface-variant">Fonte</span>
                         <select
                           value={settings.preferredFont}
-                          onChange={(e) => setSettings(prev => ({ ...prev, preferredFont: e.target.value as WritingSettings['preferredFont'] }))}
-                          className="text-xs border border-neutral-850 bg-neutral-900 text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
+                          onChange={(e) => setSettings((prev: WritingSettings) => ({ ...prev, preferredFont: e.target.value as WritingSettings['preferredFont'] }))}
+                          className="text-xs border border-outline-variant bg-surface-container-lowest text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
                         >
                           <option value="serif">Garamond</option>
                           <option value="sans">Inter (Sans)</option>
@@ -1687,11 +1689,11 @@ export default function WorkspaceEditor({
                       </div>
 
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] text-neutral-500">Tamanho</span>
+                        <span className="text-[10px] text-on-surface-variant">Tamanho</span>
                         <select
                           value={settings.fontSize}
-                          onChange={(e) => setSettings(prev => ({ ...prev, fontSize: e.target.value as WritingSettings['fontSize'] }))}
-                          className="text-xs border border-neutral-850 bg-neutral-900 text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
+                          onChange={(e) => setSettings((prev: WritingSettings) => ({ ...prev, fontSize: e.target.value as WritingSettings['fontSize'] }))}
+                          className="text-xs border border-outline-variant bg-surface-container-lowest text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
                         >
                           <option value="sm">Pequeno</option>
                           <option value="md">Médio</option>
@@ -1703,29 +1705,29 @@ export default function WorkspaceEditor({
                   </div>
 
                   {/* Daily Target Widget */}
-                  <div className="bg-[#f7f3f2] dark:bg-[#0f0f12] border border-neutral-850 p-4 rounded-2xl space-y-3">
+                  <div className="bg-surface dark:bg-[#0f0f12] border border-outline-variant p-4 rounded-2xl space-y-3">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-neutral-400 flex items-center gap-1.5">
+                      <span className="font-medium text-on-surface-variant flex items-center gap-1.5">
                         <Clock size={13} className="text-indigo-400" /> Meta do Capítulo
                       </span>
                       <span className="font-mono text-indigo-400 font-bold">{dailyProgress}%</span>
                     </div>
                     
-                    <div className="w-full bg-neutral-950 h-2 rounded-full overflow-hidden border border-neutral-900">
+                    <div className="w-full bg-neutral-950 h-2 rounded-full overflow-hidden border border-outline-variant">
                       <div 
                         className="bg-indigo-500 h-full transition-all duration-500 ease-out shadow-[0_0_8px_rgba(99,102,241,0.3)]"
                         style={{ width: `${dailyProgress}%` }}
                       />
                     </div>
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-neutral-400">{activeWords} / {settings.dailyGoal} pal.</span>
+                      <span className="text-on-surface-variant">{activeWords} / {settings.dailyGoal} pal.</span>
                       <button
                         onClick={() => {
                           const goal = window.prompt('Ajustar meta diária de palavras do capítulo:', settings.dailyGoal.toString());
                           if (goal) {
                             const num = parseInt(goal, 10);
                             if (!isNaN(num) && num > 0) {
-                      setSettings(prev => ({ ...prev, dailyGoal: num }));
+                      setSettings((prev: WritingSettings) => ({ ...prev, dailyGoal: num }));
                             }
                           }
                         }}
@@ -1743,13 +1745,13 @@ export default function WorkspaceEditor({
       )}
 
       {/* CENTER WRITING AREA & CANVAS */}
-      <section className="flex-1 flex flex-col bg-[#f7f3f2] dark:bg-[#09090b] relative overflow-hidden">
+      <section className="flex-1 flex flex-col bg-surface dark:bg-surface relative overflow-hidden">
         
         {leftTab === 'planning' ? (
           /* FULL PAGE KANBAN PLANNING BOARD */
-          <div className="flex-1 overflow-y-auto p-8 bg-[#f7f3f2] dark:bg-[#09090b] text-neutral-800 dark:text-neutral-200 space-y-10 select-none">
+          <div className="flex-1 overflow-y-auto p-8 bg-surface dark:bg-surface text-neutral-800 dark:text-on-surface space-y-10 select-none">
             {/* Planning Header */}
-            <div className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-900 pb-4">
+            <div className="flex justify-between items-center border-b border-neutral-200 dark:border-outline-variant pb-4">
               <div className="flex items-center gap-3">
                 <span className="text-3xl">📋</span>
                 <h2 className="text-xl font-bold font-serif text-neutral-900 dark:text-white tracking-wide">Planning</h2>
@@ -1773,11 +1775,11 @@ export default function WorkspaceEditor({
                   className="space-y-4"
                 >
                   {/* Lane Header */}
-                  <div className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-850 pb-2">
+                  <div className="flex justify-between items-center border-b border-neutral-200 dark:border-outline-variant pb-2">
                     <div className="flex items-center gap-2 select-none">
                       <span 
                         onClick={() => renamePlanningSection(section.id, section.name)}
-                        className="text-lg font-bold text-neutral-800 dark:text-neutral-200 font-serif cursor-pointer hover:text-indigo-600"
+                        className="text-lg font-bold text-neutral-800 dark:text-on-surface font-serif cursor-pointer hover:text-indigo-600"
                       >
                         {section.name}
                       </span>
@@ -1794,7 +1796,7 @@ export default function WorkspaceEditor({
                     
                     <button 
                       onClick={() => addPlanningCard(section.id)}
-                      className="bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-850 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-800 text-xs font-bold px-3 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                      className="bg-neutral-50 dark:bg-surface-container-lowest hover:bg-neutral-100 dark:hover:bg-neutral-850 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-outline-variant text-xs font-bold px-3 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                     >
                       Add <Plus size={12} />
                     </button>
@@ -1810,7 +1812,7 @@ export default function WorkspaceEditor({
                           draggable
                           onDragStart={(e) => handleDragStart(e, card.id)}
                           onClick={() => setActivePlanningCardId(card.id)}
-                          className="w-[245px] bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-4 rounded-xl text-sm relative group space-y-2 cursor-grab active:cursor-grabbing hover:border-neutral-300 dark:hover:border-neutral-750 transition-all shadow-sm text-left flex flex-col justify-between min-h-[135px]"
+                          className="w-[245px] bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant p-4 rounded-xl text-sm relative group space-y-2 cursor-grab active:cursor-grabbing hover:border-neutral-300 dark:hover:border-neutral-750 transition-all shadow-sm text-left flex flex-col justify-between min-h-[135px]"
                         >
                           <div>
                             <div className="flex justify-between items-start gap-2">
@@ -1821,7 +1823,7 @@ export default function WorkspaceEditor({
                                     e.stopPropagation(); 
                                     togglePinCard(card.id); 
                                   }} 
-                                  className="text-neutral-400 hover:text-indigo-500 cursor-pointer transition-colors"
+                                  className="text-on-surface-variant hover:text-indigo-500 cursor-pointer transition-colors"
                                   title={isPinned ? "Desafixar" : "Fixar nas notas"}
                                 >
                                   <Pin size={11} className={isPinned ? "fill-indigo-500 text-indigo-500" : ""} />
@@ -1833,14 +1835,14 @@ export default function WorkspaceEditor({
                               <img 
                                 src={card.images[0]} 
                                 alt="Card Preview" 
-                                className="w-full h-20 object-cover rounded-lg border border-neutral-200 dark:border-neutral-800 my-1" 
+                                className="w-full h-20 object-cover rounded-lg border border-neutral-200 dark:border-outline-variant my-1"
                               />
                             )}
-                            <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed font-sans mt-1.5 line-clamp-3">{card.content}</p>
+                            <p className="text-on-surface-variant dark:text-on-surface-variant text-sm leading-relaxed font-sans mt-1.5 line-clamp-3">{card.content}</p>
                           </div>
                           
-                          <div className="flex justify-between items-center pt-2 border-t border-neutral-100 dark:border-neutral-900 mt-2">
-                            <span className="text-[9px] bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Geral'}</span>
+                          <div className="flex justify-between items-center pt-2 border-t border-neutral-100 dark:border-outline-variant mt-2">
+                            <span className="text-[9px] bg-neutral-100 dark:bg-surface-container-lowest text-on-surface-variant dark:text-on-surface-variant px-2 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Geral'}</span>
                             <button 
                               onClick={(e) => { e.stopPropagation(); deletePlanningCard(card.id); }} 
                               className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity cursor-pointer"
@@ -1852,7 +1854,7 @@ export default function WorkspaceEditor({
                       );
                     })}
                     {planningCards.filter(c => c.column === section.id).length === 0 && (
-                      <div className="text-neutral-400 dark:text-neutral-600 text-xs italic font-sans py-2 select-none">Sem cards nesta seção. Clique em "Add +" para criar.</div>
+                      <div className="text-on-surface-variant dark:text-neutral-600 text-xs italic font-sans py-2 select-none">Sem cards nesta seção. Clique em "Add +" para criar.</div>
                     )}
                   </div>
                 </div>
@@ -1861,11 +1863,11 @@ export default function WorkspaceEditor({
           </div>
         ) : (
           /* The Text Editor Canvas Sheet */
-          <div className="flex-1 overflow-y-auto px-6 py-8 md:px-12 lg:px-20 flex justify-center bg-[#f7f3f2] dark:bg-[#09090b]">
-            <div className="w-full max-w-3xl flex flex-col bg-neutral-900 border border-neutral-800 rounded-3xl shadow-2xl p-8 md:p-14 relative min-h-[70vh] editor-paper">
+          <div className="flex-1 overflow-y-auto px-6 py-8 md:px-12 lg:px-20 flex justify-center bg-surface dark:bg-surface">
+            <div className="w-full max-w-3xl flex flex-col bg-surface-container-lowest border border-outline-variant rounded-3xl shadow-2xl p-8 md:p-14 relative min-h-[70vh] editor-paper">
               
               {/* Chapter Header */}
-              <div className="mb-6 border-b border-neutral-800/80 pb-4">
+              <div className="mb-6 border-b border-outline-variant/80 pb-4">
                 <input
                   type="text"
                   value={activeChapter ? activeChapter.title : ''}
@@ -1873,7 +1875,7 @@ export default function WorkspaceEditor({
                   placeholder="Título do Capítulo..."
                   className="w-full font-serif text-2xl md:text-3xl text-white border-none bg-transparent focus:outline-none placeholder:text-neutral-700 font-medium"
                 />
-                <span className="text-[9px] font-mono text-neutral-500 mt-1 block uppercase tracking-wider">
+                <span className="text-[9px] font-mono text-on-surface-variant mt-1 block uppercase tracking-wider">
                   Última edição realizada hoje, às {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
@@ -1883,7 +1885,7 @@ export default function WorkspaceEditor({
 
               {/* Writing Area */}
               <div 
-                className={`flex-1 w-full text-left bg-transparent focus:outline-none ${getFontClass()} ${getFontSizeClass()} text-neutral-200 outline-none`}
+                className={`flex-1 w-full text-left bg-transparent focus:outline-none ${getFontClass()} ${getFontSizeClass()} text-on-surface outline-none`}
                 style={{ minHeight: '380px' }}
               >
                 {editor && <EditorContent editor={editor} />}
@@ -1891,7 +1893,7 @@ export default function WorkspaceEditor({
 
               {/* Distraction free overlay indicators */}
               {isDistractionFree && (
-                <div className="absolute bottom-6 left-12 right-12 flex justify-between items-center border-t border-neutral-850/50 pt-4 text-[10px] font-mono text-neutral-500 select-none">
+                <div className="absolute bottom-6 left-12 right-12 flex justify-between items-center border-t border-outline-variant/50 pt-4 text-[10px] font-mono text-on-surface-variant select-none">
                   <span>{activeChapter ? activeChapter.title : ''}</span>
                   <span>{activeWords} palavras</span>
                   <button 
@@ -1914,11 +1916,11 @@ export default function WorkspaceEditor({
         <div className="flex shrink-0 select-none">
           {/* Collapse drawer content panel */}
           {activeRightTool && (
-            <aside className="w-80 border-l border-neutral-200 dark:border-neutral-900 bg-[#f7f3f2] dark:bg-[#0c0c0e] flex flex-col justify-between overflow-hidden animate-fade-in">
+            <aside className="w-80 border-l border-neutral-200 dark:border-outline-variant bg-surface dark:bg-[#0c0c0e] flex flex-col justify-between overflow-hidden animate-fade-in">
               <div className="p-5 space-y-6 h-full flex flex-col justify-start">
                 
                 {/* Tool title header */}
-                <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
+                <div className="flex justify-between items-center border-b border-outline-variant pb-3">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-indigo-400 font-mono flex items-center gap-2">
                     {activeRightTool === 'stats' && <><AlignLeft size={15} /> Metas & Insights</>}
                     {activeRightTool === 'challenges' && <><Trophy size={15} /> Desafios Literários</>}
@@ -1938,7 +1940,7 @@ export default function WorkspaceEditor({
                             const input = document.getElementById('sidebar-image-upload') as HTMLInputElement;
                             if (input) input.click();
                           }}
-                          className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-450 hover:text-indigo-500 rounded-lg transition-colors"
+                          className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-on-surface-variant dark:text-neutral-450 hover:text-indigo-500 rounded-lg transition-colors"
                           title="Anexar Imagem"
                         >
                           <Plus size={16} />
@@ -1981,7 +1983,7 @@ export default function WorkspaceEditor({
                     )}
                     <button 
                       onClick={() => setActiveRightTool(null)} 
-                      className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg transition-colors"
+                      className="p-1.5 hover:bg-neutral-800 text-on-surface-variant hover:text-white rounded-lg transition-colors"
                     >
                       <X size={15} />
                     </button>
@@ -1992,51 +1994,51 @@ export default function WorkspaceEditor({
                 {activeRightTool === 'stats' && (
                   <div className="space-y-6 flex-1 overflow-y-auto text-neutral-300">
                     {/* Smiley mood check-in */}
-                    <div className="space-y-2 bg-neutral-900/60 p-3.5 border border-neutral-850 rounded-2xl text-center">
-                      <div className="text-[10px] font-bold text-neutral-400 uppercase">Como foi o trabalho hoje?</div>
+                    <div className="space-y-2 bg-surface-container-lowest/60 p-3.5 border border-outline-variant rounded-2xl text-center">
+                      <div className="text-[10px] font-bold text-on-surface-variant uppercase">Como foi o trabalho hoje?</div>
                       <div className="flex justify-center gap-4 py-1.5">
                         <button 
                           onClick={() => setSessionMood('happy')}
-                          className={`p-1.5 rounded-full transition-colors ${sessionMood === 'happy' ? 'bg-indigo-600 text-white' : 'hover:bg-neutral-800 text-neutral-400'}`}
+                          className={`p-1.5 rounded-full transition-colors ${sessionMood === 'happy' ? 'bg-indigo-600 text-white' : 'hover:bg-neutral-800 text-on-surface-variant'}`}
                           title="Excelente ritmo!"
                         >
                           <Smile size={18} />
                         </button>
                         <button 
                           onClick={() => setSessionMood('neutral')}
-                          className={`p-1.5 rounded-full transition-colors ${sessionMood === 'neutral' ? 'bg-indigo-600 text-white' : 'hover:bg-neutral-800 text-neutral-400'}`}
+                          className={`p-1.5 rounded-full transition-colors ${sessionMood === 'neutral' ? 'bg-indigo-600 text-white' : 'hover:bg-neutral-800 text-on-surface-variant'}`}
                           title="Foco mediano"
                         >
                           <Meh size={18} />
                         </button>
                         <button 
                           onClick={() => setSessionMood('sad')}
-                          className={`p-1.5 rounded-full transition-colors ${sessionMood === 'sad' ? 'bg-indigo-600 text-white' : 'hover:bg-neutral-800 text-neutral-400'}`}
+                          className={`p-1.5 rounded-full transition-colors ${sessionMood === 'sad' ? 'bg-indigo-600 text-white' : 'hover:bg-neutral-800 text-on-surface-variant'}`}
                           title="Bloqueio criativo"
                         >
                           <Frown size={18} />
                         </button>
                       </div>
-                      <span className="text-[9px] text-neutral-500 block">Identificar seu ânimo melhora as estatísticas de escrita a longo prazo.</span>
+                      <span className="text-[9px] text-on-surface-variant block">Identificar seu ânimo melhora as estatísticas de escrita a longo prazo.</span>
                     </div>
 
                     {/* Stats table */}
                     <div className="space-y-3">
-                      <div className="text-xs font-bold text-neutral-400 uppercase">Dados do Capítulo</div>
+                      <div className="text-xs font-bold text-on-surface-variant uppercase">Dados do Capítulo</div>
                       <div className="space-y-1.5 text-sm font-sans">
-                        <div className="flex justify-between py-1.5 border-b border-neutral-900 text-neutral-400">
+                        <div className="flex justify-between py-1.5 border-b border-outline-variant text-on-surface-variant">
                           <span>Tempo de Leitura</span>
                           <span className="font-mono text-white font-medium">{readingTime()} min</span>
                         </div>
-                        <div className="flex justify-between py-1.5 border-b border-neutral-900 text-neutral-400">
+                        <div className="flex justify-between py-1.5 border-b border-outline-variant text-on-surface-variant">
                           <span>Contagem de Palavras</span>
                           <span className="font-mono text-white font-medium">{activeWords}</span>
                         </div>
-                        <div className="flex justify-between py-1.5 border-b border-neutral-900 text-neutral-400">
+                        <div className="flex justify-between py-1.5 border-b border-outline-variant text-on-surface-variant">
                           <span>Caracteres Totais</span>
                           <span className="font-mono text-white font-medium">{activeChapter?.content.length || 0}</span>
                         </div>
-                        <div className="flex justify-between py-1.5 border-b border-neutral-900 text-neutral-400">
+                        <div className="flex justify-between py-1.5 border-b border-outline-variant text-on-surface-variant">
                           <span>Parágrafos</span>
                           <span className="font-mono text-white font-medium">
                             {activeChapter?.content.split('\n\n').filter(p => p.trim()).length || 0}
@@ -2047,18 +2049,18 @@ export default function WorkspaceEditor({
 
                     {/* Word frequency analysis */}
                     <div className="space-y-3">
-                      <div className="text-xs font-bold text-neutral-400 uppercase">Palavras Mais Frequentes</div>
+                      <div className="text-xs font-bold text-on-surface-variant uppercase">Palavras Mais Frequentes</div>
                       {wordFrequency().length > 0 ? (
                         <div className="space-y-2">
                           {wordFrequency().map(([word, freq]) => (
-                            <div key={word} className="flex justify-between items-center bg-neutral-950 p-2 border border-neutral-850 rounded-xl text-xs">
+                            <div key={word} className="flex justify-between items-center bg-neutral-950 p-2 border border-outline-variant rounded-xl text-xs">
                               <span className="font-serif text-white italic">"{word}"</span>
                               <span className="font-mono text-indigo-400 text-xs bg-indigo-500/10 px-2 py-0.5 rounded-full font-bold">{freq} ocorrências</span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-neutral-500 italic">Escreva mais texto para visualizar as repetições de palavras.</p>
+                        <p className="text-xs text-on-surface-variant italic">Escreva mais texto para visualizar as repetições de palavras.</p>
                       )}
                     </div>
                   </div>
@@ -2067,31 +2069,31 @@ export default function WorkspaceEditor({
                 {/* TAB CONTENT: Challenges */}
                 {activeRightTool === 'challenges' && (
                   <div className="space-y-4 flex-1 overflow-y-auto text-neutral-300">
-                    <p className="text-sm text-neutral-400 leading-relaxed">Participe de desafios literários para turbinar a sua produtividade.</p>
+                    <p className="text-sm text-on-surface-variant leading-relaxed">Participe de desafios literários para turbinar a sua produtividade.</p>
                     
-                    <div className="bg-neutral-900/60 p-4 border border-neutral-850 rounded-2xl space-y-3">
+                    <div className="bg-surface-container-lowest/60 p-4 border border-outline-variant rounded-2xl space-y-3">
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="text-sm font-bold text-white font-serif">Meia Maratona de Escrita</h4>
-                          <p className="text-xs text-neutral-400 mt-0.5">Sua meta mensal de 10k palavras.</p>
+                          <p className="text-xs text-on-surface-variant mt-0.5">Sua meta mensal de 10k palavras.</p>
                         </div>
                         <span className="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded font-mono uppercase font-bold">Ativo</span>
                       </div>
-                      <div className="w-full bg-neutral-950 h-1.5 rounded-full overflow-hidden border border-neutral-900">
+                      <div className="w-full bg-neutral-950 h-1.5 rounded-full overflow-hidden border border-outline-variant">
                         <div className="bg-indigo-500 h-full w-[45%]" />
                       </div>
-                      <div className="flex justify-between text-xs text-neutral-500 font-mono">
+                      <div className="flex justify-between text-xs text-on-surface-variant font-mono">
                         <span>4.500 palavras</span>
                         <span>10.000 alvo</span>
                       </div>
                     </div>
 
-                    <div className="bg-neutral-900/60 p-4 border border-emerald-500/10 rounded-2xl space-y-2">
+                    <div className="bg-surface-container-lowest/60 p-4 border border-emerald-500/10 rounded-2xl space-y-2">
                       <div className="flex justify-between items-center">
                         <h4 className="text-sm font-bold text-neutral-300 font-serif">Arrancada de Fim de Semana</h4>
                         <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono uppercase font-bold">Concluído</span>
                       </div>
-                      <p className="text-xs text-neutral-400 leading-tight">Escreva 2.000 palavras entre sábado e domingo para liberar medalhas estelares.</p>
+                      <p className="text-xs text-on-surface-variant leading-tight">Escreva 2.000 palavras entre sábado e domingo para liberar medalhas estelares.</p>
                     </div>
                   </div>
                 )}
@@ -2099,29 +2101,29 @@ export default function WorkspaceEditor({
                 {/* TAB CONTENT: Pinned Notes */}
                 {activeRightTool === 'notes' && (
                   <div className="space-y-4 flex-1 overflow-y-auto text-neutral-700 dark:text-neutral-300 flex flex-col justify-start h-full pr-1">
-                    <p className="text-xs text-neutral-400 leading-relaxed text-left">
+                    <p className="text-xs text-on-surface-variant leading-relaxed text-left">
                       Cards fixados ou criados diretamente aqui. As alterações de texto salvam automaticamente.
                     </p>
 
                     {/* Create New Card Form */}
-                    <div className="bg-[#f7f3f2] dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 text-left">
-                      <div className="text-xs font-bold text-neutral-400 uppercase">Criar Nota / Card</div>
+                    <div className="bg-surface dark:bg-surface-container-lowest/40 border border-neutral-200 dark:border-outline-variant p-3 rounded-2xl space-y-2 text-left">
+                      <div className="text-xs font-bold text-on-surface-variant uppercase">Criar Nota / Card</div>
                       <input 
                         type="text"
                         id="new-note-title"
                         placeholder="Título da nota..."
-                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-850 dark:text-white focus:outline-none"
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant rounded-xl p-2 text-xs text-neutral-850 dark:text-white focus:outline-none"
                       />
                       <textarea
                         id="new-note-content"
                         placeholder="Descrição da nota..."
                         rows={2}
-                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-805 dark:text-white focus:outline-none resize-none"
+                        className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant rounded-xl p-2 text-xs text-neutral-805 dark:text-white focus:outline-none resize-none"
                       />
                       <div className="flex gap-2 items-center text-xs">
                         <select 
                           id="new-note-section"
-                          className="bg-neutral-55 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-1.5 text-xs text-neutral-700 dark:text-white flex-1 focus:outline-none"
+                          className="bg-neutral-55 dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant rounded-xl p-1.5 text-xs text-neutral-700 dark:text-white flex-1 focus:outline-none"
                         >
                           {planningSections.map(s => (
                             <option key={s.id} value={s.id}>{s.name}</option>
@@ -2218,7 +2220,7 @@ export default function WorkspaceEditor({
                               });
                             }
                           }}
-                          className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 relative group shadow-sm transition-colors cursor-grab active:cursor-grabbing"
+                          className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant p-3 rounded-2xl space-y-2 relative group shadow-sm transition-colors cursor-grab active:cursor-grabbing"
                         >
                           <div className="font-serif font-bold text-neutral-900 dark:text-white flex justify-between items-center">
                             <input
@@ -2230,7 +2232,7 @@ export default function WorkspaceEditor({
                             <div className="flex items-center gap-1.5">
                               <button 
                                 onClick={() => togglePinCard(card.id)}
-                                className="text-indigo-500 hover:text-neutral-500 cursor-pointer"
+                                className="text-indigo-500 hover:text-on-surface-variant cursor-pointer"
                                 title="Desafixar"
                               >
                                 <Pin size={12} className="fill-indigo-500 rotate-45" />
@@ -2246,7 +2248,7 @@ export default function WorkspaceEditor({
                                   key={i} 
                                   src={img} 
                                   alt="Note illustration" 
-                                  className="w-16 h-12 object-cover rounded-lg border border-neutral-200 dark:border-neutral-800" 
+                                  className="w-16 h-12 object-cover rounded-lg border border-neutral-200 dark:border-outline-variant"
                                 />
                               ))}
                             </div>
@@ -2256,10 +2258,10 @@ export default function WorkspaceEditor({
                             value={card.content}
                             rows={2}
                             onChange={(e) => setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, content: e.target.value } : c))}
-                            className="w-full bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-600 dark:text-neutral-300 focus:outline-none resize-none leading-relaxed"
+                            className="w-full bg-neutral-50 dark:bg-surface-container-lowest/60 border border-neutral-100 dark:border-outline-variant rounded-xl p-2 text-xs text-neutral-600 dark:text-neutral-300 focus:outline-none resize-none leading-relaxed"
                           />
                           
-                          <div className="flex justify-between items-center text-[10px] text-neutral-400 dark:text-neutral-500 pt-1">
+                          <div className="flex justify-between items-center text-[10px] text-on-surface-variant dark:text-on-surface-variant pt-1">
                             <span className="font-mono">Seção: {planningSections.find(s => s.id === card.column)?.name || 'Geral'}</span>
                             <span className="opacity-0 group-hover:opacity-100 transition-opacity">⋮ Drag to reorder</span>
                           </div>
@@ -2276,28 +2278,28 @@ export default function WorkspaceEditor({
                 {activeRightTool === 'track' && (
                   <div className="space-y-4 flex-1 overflow-y-auto text-neutral-300">
                     {/* Toggle */}
-                    <div className="flex items-center justify-between bg-neutral-900/60 p-3.5 border border-neutral-850 rounded-2xl text-xs">
+                    <div className="flex items-center justify-between bg-surface-container-lowest/60 p-3.5 border border-outline-variant rounded-2xl text-xs">
                       <div>
                         <span className="font-bold text-white block">Rastrear Alterações</span>
-                        <span className="text-xs text-neutral-500">Registrar histórico de modificações</span>
+                        <span className="text-xs text-on-surface-variant">Registrar histórico de modificações</span>
                       </div>
                       <input
                         type="checkbox"
                         checked={trackChanges}
                         onChange={(e) => setTrackChanges(e.target.checked)}
-                        className="rounded border-neutral-800 text-indigo-500 bg-neutral-950 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                        className="rounded border-outline-variant text-indigo-500 bg-neutral-950 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
                       />
                     </div>
 
                     <div className="space-y-3">
-                      <div className="text-xs font-bold text-neutral-400 uppercase">Sugestões de Estilo</div>
+                      <div className="text-xs font-bold text-on-surface-variant uppercase">Sugestões de Estilo</div>
                       {suggestions.map(s => (
-                        <div key={s.id} className="bg-neutral-950 border border-neutral-850 p-4 rounded-xl space-y-2.5">
+                        <div key={s.id} className="bg-neutral-950 border border-outline-variant p-4 rounded-xl space-y-2.5">
                           <div className="flex justify-between items-center text-xs">
                             <span className="text-amber-400 uppercase font-mono font-bold">{s.type === 'cliche' ? 'Clichê Detectado' : 'Repetição'}</span>
                             <button 
                               onClick={() => setSuggestions(suggestions.filter(x => x.id !== s.id))}
-                              className="text-neutral-500 hover:text-white"
+                              className="text-on-surface-variant hover:text-white"
                             >
                               Dispensar
                             </button>
@@ -2305,7 +2307,7 @@ export default function WorkspaceEditor({
                           <p className="text-sm font-serif leading-relaxed text-neutral-300">
                             {s.comment}
                           </p>
-                          <div className="flex justify-between items-center text-xs bg-neutral-900 p-2 rounded-lg border border-neutral-850">
+                          <div className="flex justify-between items-center text-xs bg-surface-container-lowest p-2 rounded-lg border border-outline-variant">
                             <span className="text-red-400 line-through">"{s.original}"</span>
                             <span className="text-emerald-400">"{s.replacement}"</span>
                           </div>
@@ -2327,10 +2329,10 @@ export default function WorkspaceEditor({
 
                     <div className="space-y-2.5">
                       {snapshots.map(snap => (
-                        <div key={snap.id} className="bg-neutral-950 border border-neutral-850 p-3 rounded-xl flex justify-between items-center">
+                        <div key={snap.id} className="bg-neutral-950 border border-outline-variant p-3 rounded-xl flex justify-between items-center">
                           <div className="space-y-0.5">
                             <h4 className="text-sm font-serif font-semibold text-white">{snap.title}</h4>
-                            <p className="text-xs text-neutral-500 font-mono">{snap.timestamp}</p>
+                            <p className="text-xs text-on-surface-variant font-mono">{snap.timestamp}</p>
                           </div>
                           <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">{snap.charCount} caracteres</span>
                         </div>
@@ -2343,44 +2345,44 @@ export default function WorkspaceEditor({
                 {activeRightTool === 'search' && (
                   <div className="space-y-4 flex-1 overflow-y-auto text-neutral-300">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold uppercase text-neutral-400 block">Localizar</label>
+                      <label className="text-xs font-bold uppercase text-on-surface-variant block">Localizar</label>
                       <input
                         type="text"
                         value={findText}
                         onChange={(e) => setFindText(e.target.value)}
                         placeholder="Palavra ou termo..."
-                        className="w-full text-sm border border-neutral-850 bg-neutral-950 text-white p-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full text-sm border border-outline-variant bg-neutral-950 text-white p-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold uppercase text-neutral-400 block">Substituir por</label>
+                      <label className="text-xs font-bold uppercase text-on-surface-variant block">Substituir por</label>
                       <input
                         type="text"
                         value={replaceText}
                         onChange={(e) => setReplaceText(e.target.value)}
                         placeholder="Nova palavra ou frase..."
-                        className="w-full text-sm border border-neutral-850 bg-neutral-950 text-white p-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full text-sm border border-outline-variant bg-neutral-950 text-white p-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       />
                     </div>
 
                     <div className="space-y-2 pt-2 text-xs font-sans">
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-400">Diferenciar maiúsculas/minúsculas</span>
+                        <span className="text-on-surface-variant">Diferenciar maiúsculas/minúsculas</span>
                         <input
                           type="checkbox"
                           checked={matchCase}
                           onChange={(e) => setMatchCase(e.target.checked)}
-                          className="rounded border-neutral-800 text-indigo-500 bg-neutral-950 w-4 h-4"
+                          className="rounded border-outline-variant text-indigo-500 bg-neutral-950 w-4 h-4"
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-400">Apenas neste capítulo</span>
+                        <span className="text-on-surface-variant">Apenas neste capítulo</span>
                         <input
                           type="checkbox"
                           checked={searchOnlyThisChapter}
                           onChange={(e) => setSearchOnlyThisChapter(e.target.checked)}
-                          className="rounded border-neutral-800 text-indigo-500 bg-neutral-950 w-4 h-4"
+                          className="rounded border-outline-variant text-indigo-500 bg-neutral-950 w-4 h-4"
                         />
                       </div>
                     </div>
@@ -2388,7 +2390,7 @@ export default function WorkspaceEditor({
                     <button
                       onClick={executeFindAndReplace}
                       disabled={!findText}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-neutral-800 disabled:text-neutral-500 text-white text-xs font-bold uppercase tracking-widest py-2.5 rounded-xl transition-all mt-4 cursor-pointer"
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-neutral-800 disabled:text-on-surface-variant text-white text-xs font-bold uppercase tracking-widest py-2.5 rounded-xl transition-all mt-4 cursor-pointer"
                     >
                       Substituir Ocorrências
                     </button>
@@ -2398,32 +2400,32 @@ export default function WorkspaceEditor({
                 {/* TAB CONTENT: Spellcheck */}
                 {activeRightTool === 'spell' && (
                   <div className="space-y-4 flex-1 overflow-y-auto text-neutral-300">
-                    <div className="flex items-center justify-between bg-neutral-900/60 p-3.5 border border-neutral-850 rounded-2xl text-sm">
+                    <div className="flex items-center justify-between bg-surface-container-lowest/60 p-3.5 border border-outline-variant rounded-2xl text-sm">
                       <div>
                         <span className="font-bold text-white block">Ativar Corretor</span>
-                        <span className="text-xs text-neutral-500">Exibir sublinhados ortográficos</span>
+                        <span className="text-xs text-on-surface-variant">Exibir sublinhados ortográficos</span>
                       </div>
                       <input
                         type="checkbox"
                         checked={spellingActive}
                         onChange={(e) => setSpellingActive(e.target.checked)}
-                        className="rounded border-neutral-800 text-indigo-500 bg-neutral-950 w-4 h-4"
+                        className="rounded border-outline-variant text-indigo-500 bg-neutral-950 w-4 h-4"
                       />
                     </div>
 
                     <div className="space-y-3">
-                      <div className="text-xs font-bold text-neutral-400 uppercase">Inconsistências Encontradas</div>
+                      <div className="text-xs font-bold text-on-surface-variant uppercase">Inconsistências Encontradas</div>
                       {spellingActive ? (
                         <div className="space-y-2.5">
-                          <div className="bg-neutral-950 border border-neutral-850 p-3 rounded-xl text-sm space-y-1.5">
+                          <div className="bg-neutral-950 border border-outline-variant p-3 rounded-xl text-sm space-y-1.5">
                             <div className="text-xs text-red-400 font-mono uppercase font-bold">Erro de Concordância</div>
                             <p className="font-serif italic">"...setecentas palavras haviam sido confiadas..."</p>
-                            <span className="text-xs text-neutral-400 block mt-1">Concordância passiva correta. Nenhuma alteração solicitada.</span>
+                            <span className="text-xs text-on-surface-variant block mt-1">Concordância passiva correta. Nenhuma alteração solicitada.</span>
                           </div>
-                          <p className="text-sm text-neutral-400 text-center py-4">Tudo limpo por aqui! Seu manuscrito não possui falhas crassas.</p>
+                          <p className="text-sm text-on-surface-variant text-center py-4">Tudo limpo por aqui! Seu manuscrito não possui falhas crassas.</p>
                         </div>
                       ) : (
-                        <p className="text-sm text-neutral-500 italic text-center">Ative o corretor ortográfico para realizar a varredura do texto.</p>
+                        <p className="text-sm text-on-surface-variant italic text-center">Ative o corretor ortográfico para realizar a varredura do texto.</p>
                       )}
                     </div>
                   </div>
@@ -2432,18 +2434,18 @@ export default function WorkspaceEditor({
                 {/* TAB CONTENT: Footnotes (Item 7) */}
                 {activeRightTool === 'footnotes' && (
                   <div className="space-y-4 flex-1 overflow-y-auto text-neutral-700 dark:text-neutral-300 flex flex-col justify-start h-full pr-1">
-                    <p className="text-xs text-neutral-400 leading-relaxed text-left">
+                    <p className="text-xs text-on-surface-variant leading-relaxed text-left">
                       Crie notas de rodapé estilo Scrivener. Elas são inseridas inline como marcadores {"[" + "^" + "X]"} e gerenciadas aqui.
                     </p>
 
                     {/* Insert Inline Footnote Form */}
-                    <div className="bg-[#f7f3f2] dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 text-left">
-                      <div className="text-xs font-bold text-neutral-400 uppercase">Inserir Nota de Rodapé</div>
+                    <div className="bg-surface dark:bg-surface-container-lowest/40 border border-neutral-200 dark:border-outline-variant p-3 rounded-2xl space-y-2 text-left">
+                      <div className="text-xs font-bold text-on-surface-variant uppercase">Inserir Nota de Rodapé</div>
                       <textarea
                         id="new-footnote-text"
                         placeholder="Texto da nota de rodapé..."
                         rows={3}
-                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-800 dark:text-white focus:outline-none resize-none"
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant rounded-xl p-2 text-xs text-neutral-800 dark:text-white focus:outline-none resize-none"
                       />
                       <button
                         onClick={() => {
@@ -2481,7 +2483,7 @@ export default function WorkspaceEditor({
                     <div className="space-y-3 mt-2 text-left flex-1 overflow-y-auto">
                       <div className="text-xs font-bold text-neutral-450 uppercase">Notas deste Capítulo</div>
                       {(footnotes[activeChapter?.id || ''] || []).map(fn => (
-                        <div key={fn.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-3 rounded-2xl space-y-2 relative group shadow-sm">
+                        <div key={fn.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant p-3 rounded-2xl space-y-2 relative group shadow-sm">
                           <div className="font-serif font-bold text-neutral-900 dark:text-white flex justify-between items-center">
                             <span>Nota {"[" + "^"}{fn.num}{"]"}</span>
                             <button 
@@ -2508,12 +2510,12 @@ export default function WorkspaceEditor({
                                 )
                               }));
                             }}
-                            className="w-full bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-850 rounded-xl p-2 text-xs text-neutral-600 dark:text-neutral-300 focus:outline-none resize-none leading-relaxed"
+                            className="w-full bg-neutral-50 dark:bg-surface-container-lowest/60 border border-neutral-100 dark:border-outline-variant rounded-xl p-2 text-xs text-neutral-600 dark:text-neutral-300 focus:outline-none resize-none leading-relaxed"
                           />
                         </div>
                       ))}
                       {(!footnotes[activeChapter?.id || ''] || footnotes[activeChapter.id].length === 0) && (
-                        <div className="text-center py-8 text-neutral-500 text-xs italic font-sans">Nenhuma nota de rodapé neste capítulo.</div>
+                        <div className="text-center py-8 text-on-surface-variant text-xs italic font-sans">Nenhuma nota de rodapé neste capítulo.</div>
                       )}
                     </div>
                   </div>
@@ -2524,7 +2526,7 @@ export default function WorkspaceEditor({
           )}
 
           {/* Collapsible right sidebar icon strip */}
-          <aside className="w-16 border-l border-neutral-900 bg-[#f7f3f2] dark:bg-[#09090b] flex flex-col justify-between items-center py-4 shrink-0 select-none">
+          <aside className="w-16 border-l border-outline-variant bg-surface dark:bg-surface flex flex-col justify-between items-center py-4 shrink-0 select-none">
             {/* Top stack icons */}
             <div className="space-y-3.5 flex flex-col items-center">
               <button
@@ -2532,7 +2534,7 @@ export default function WorkspaceEditor({
                 className={`p-2 rounded-xl border transition-all cursor-pointer ${
                   activeRightTool === 'stats'
                     ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                    : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                    : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
                 }`}
                 title="Metas & Insights"
               >
@@ -2544,7 +2546,7 @@ export default function WorkspaceEditor({
                 className={`p-2 rounded-xl border transition-all cursor-pointer ${
                   activeRightTool === 'challenges'
                     ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                    : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                    : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
                 }`}
                 title="Desafios Literários"
               >
@@ -2556,7 +2558,7 @@ export default function WorkspaceEditor({
                 className={`p-2 rounded-xl border transition-all cursor-pointer ${
                   activeRightTool === 'notes'
                     ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                    : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                    : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
                 }`}
                 title="Notas Fixadas"
               >
@@ -2568,7 +2570,7 @@ export default function WorkspaceEditor({
                 className={`p-2 rounded-xl border transition-all cursor-pointer ${
                   activeRightTool === 'track'
                     ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                    : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                    : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
                 }`}
                 title="Controle de Alterações & Sugestões"
               >
@@ -2580,7 +2582,7 @@ export default function WorkspaceEditor({
                 className={`p-2 rounded-xl border transition-all cursor-pointer ${
                   activeRightTool === 'history'
                     ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                    : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                    : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
                 }`}
                 title="Snapshots de Versão"
               >
@@ -2592,7 +2594,7 @@ export default function WorkspaceEditor({
                 className={`p-2 rounded-xl border transition-all cursor-pointer ${
                   activeRightTool === 'search'
                     ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                    : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                    : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
                 }`}
                 title="Buscar & Substituir"
               >
@@ -2604,7 +2606,7 @@ export default function WorkspaceEditor({
                 className={`p-2 rounded-xl border transition-all cursor-pointer ${
                   activeRightTool === 'spell'
                     ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                    : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                    : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
                 }`}
                 title="Corretor Ortográfico"
               >
@@ -2617,7 +2619,7 @@ export default function WorkspaceEditor({
                     deleteChapter(activeChapter.id, e);
                   }
                 }}
-                className="p-2 rounded-xl border border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900 transition-all cursor-pointer"
+                className="p-2 rounded-xl border border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest transition-all cursor-pointer"
                 title="Excluir Capítulo Atual"
               >
                 <Trash2 size={18} />
@@ -2628,7 +2630,7 @@ export default function WorkspaceEditor({
                 className={`p-2 rounded-xl border transition-all cursor-pointer ${
                   activeRightTool === 'footnotes'
                     ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                    : 'border-transparent text-neutral-500 hover:text-white hover:bg-neutral-900'
+                    : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
                 }`}
                 title="Notas de Rodapé"
               >
@@ -2641,7 +2643,7 @@ export default function WorkspaceEditor({
               {/* Diagramador e exportador */}
               <button
                 onClick={() => setShowExporterModal(true)}
-                className="p-2 rounded-xl text-neutral-500 hover:text-white hover:bg-neutral-900 border border-transparent transition-all cursor-pointer"
+                className="p-2 rounded-xl text-on-surface-variant hover:text-white hover:bg-surface-container-lowest border border-transparent transition-all cursor-pointer"
                 title="Diagramação & Exportação"
               >
                 <Download size={18} />
@@ -2650,7 +2652,7 @@ export default function WorkspaceEditor({
               {/* Configurações do Editor (Engrenagem) */}
               <button
                 onClick={() => setShowEditorSettingsModal(true)}
-                className="p-2 rounded-xl text-neutral-500 hover:text-white hover:bg-neutral-900 border border-transparent transition-all cursor-pointer"
+                className="p-2 rounded-xl text-on-surface-variant hover:text-white hover:bg-surface-container-lowest border border-transparent transition-all cursor-pointer"
                 title="Configurações do Editor (Fonte, Tamanho, etc.)"
               >
                 <Settings size={18} />
@@ -2663,17 +2665,17 @@ export default function WorkspaceEditor({
       {/* MODAL 1: EXPORTER / DIAGRAMADOR MODAL */}
       {showExporterModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
+          <div className="bg-surface dark:bg-surface border border-outline-variant rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
             
             {/* Header */}
-            <div className="px-6 py-4 border-b border-neutral-900 flex justify-between items-center bg-[#f7f3f2] dark:bg-[#0c0c0e]">
+            <div className="px-6 py-4 border-b border-outline-variant flex justify-between items-center bg-surface dark:bg-[#0c0c0e]">
               <div className="flex items-center gap-2">
                 <BookMarked size={18} className="text-indigo-400" />
                 <span className="font-serif font-bold text-lg text-white">Configurações do Editor: Diagramador & Exportador</span>
               </div>
               <button 
                 onClick={() => setShowExporterModal(false)}
-                className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                className="p-1.5 hover:bg-neutral-800 rounded-lg text-on-surface-variant hover:text-white transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -2694,17 +2696,17 @@ export default function WorkspaceEditor({
       {/* MODAL 2: AUTHOR PROFILE BUILDER MODAL */}
       {showProfileModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
+          <div className="bg-surface dark:bg-surface border border-outline-variant rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
             
             {/* Header */}
-            <div className="px-6 py-4 border-b border-neutral-900 flex justify-between items-center bg-[#f7f3f2] dark:bg-[#0c0c0e]">
+            <div className="px-6 py-4 border-b border-outline-variant flex justify-between items-center bg-surface dark:bg-[#0c0c0e]">
               <div className="flex items-center gap-2">
                 <User size={18} className="text-indigo-400" />
                 <span className="font-serif font-bold text-lg text-white">Configurações do Perfil de Autor</span>
               </div>
               <button 
                 onClick={() => setShowProfileModal(false)}
-                className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                className="p-1.5 hover:bg-neutral-800 rounded-lg text-on-surface-variant hover:text-white transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -2725,11 +2727,11 @@ export default function WorkspaceEditor({
       {/* MODAL 2.5: EDITOR DETAILS SETTINGS MODAL */}
       {showEditorSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-3xl w-full max-w-md p-6 shadow-2xl relative space-y-4 text-left">
+          <div className="bg-surface dark:bg-surface border border-outline-variant rounded-3xl w-full max-w-md p-6 shadow-2xl relative space-y-4 text-left">
             {/* Close Button */}
             <button 
               onClick={() => setShowEditorSettingsModal(false)}
-              className="absolute top-4 right-4 p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-4 right-4 p-1.5 hover:bg-neutral-800 rounded-lg text-on-surface-variant hover:text-white transition-colors cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -2739,18 +2741,18 @@ export default function WorkspaceEditor({
               <h3 className="font-serif font-bold text-lg text-neutral-900 dark:text-white">Configurações do Editor</h3>
             </div>
 
-            <p className="text-xs text-neutral-500 leading-relaxed">
+            <p className="text-xs text-on-surface-variant leading-relaxed">
               Ajuste as preferências de visualização da área de escrita do editor. Essas configurações alteram apenas a sua visualização local.
             </p>
 
             <div className="space-y-4 pt-2">
               {/* Font Family Selection */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400">Família de Fonte</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Família de Fonte</label>
                 <select
                   value={settings.preferredFont}
-                  onChange={(e) => setSettings(prev => ({ ...prev, preferredFont: e.target.value as WritingSettings['preferredFont'] }))}
-                  className="text-sm border border-neutral-200 dark:border-neutral-850 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
+                  onChange={(e) => setSettings((prev: WritingSettings) => ({ ...prev, preferredFont: e.target.value as WritingSettings['preferredFont'] }))}
+                  className="text-sm border border-neutral-200 dark:border-outline-variant bg-white dark:bg-surface-container-lowest text-neutral-800 dark:text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
                 >
                   <option value="serif">Garamond (Clássica/Serifada)</option>
                   <option value="sans">Inter (Moderna/Sem Serifas)</option>
@@ -2760,11 +2762,11 @@ export default function WorkspaceEditor({
 
               {/* Font Size Selection */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400">Tamanho do Texto</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Tamanho do Texto</label>
                 <select
                   value={settings.fontSize}
-                  onChange={(e) => setSettings(prev => ({ ...prev, fontSize: e.target.value as WritingSettings['fontSize'] }))}
-                  className="text-sm border border-neutral-200 dark:border-neutral-850 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
+                  onChange={(e) => setSettings((prev: WritingSettings) => ({ ...prev, fontSize: e.target.value as WritingSettings['fontSize'] }))}
+                  className="text-sm border border-neutral-200 dark:border-outline-variant bg-white dark:bg-surface-container-lowest text-neutral-800 dark:text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
                 >
                   <option value="sm">Pequeno</option>
                   <option value="md">Médio</option>
@@ -2775,7 +2777,7 @@ export default function WorkspaceEditor({
 
               {/* Layout Margins */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400">Margem do Editor</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Margem do Editor</label>
                 <div className="grid grid-cols-3 gap-2">
                   {([
                     { key: 'tight', name: 'Estreita' },
@@ -2784,11 +2786,11 @@ export default function WorkspaceEditor({
                   ] as const).map((margin) => (
                     <button
                       key={margin.key}
-                      onClick={() => setSettings(prev => ({ ...prev, marginSize: margin.key }))}
+                      onClick={() => setSettings((prev: WritingSettings) => ({ ...prev, marginSize: margin.key }))}
                       className={`py-2 px-3 text-xs border rounded-xl text-center transition-all cursor-pointer ${
                         settings.marginSize === margin.key
                           ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 font-bold'
-                          : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-850 text-neutral-600 dark:text-neutral-400'
+                          : 'border-neutral-200 dark:border-outline-variant hover:bg-neutral-100 dark:hover:bg-neutral-850 text-neutral-600 dark:text-on-surface-variant'
                       }`}
                     >
                       {margin.name}
@@ -2813,10 +2815,10 @@ export default function WorkspaceEditor({
       {/* MODAL 3: CREATE NEW BOARD MODAL */}
       {showNewBoardModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 relative">
+          <div className="bg-surface dark:bg-surface border border-outline-variant rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 relative">
             <button 
               onClick={() => setShowNewBoardModal(false)}
-              className="absolute top-4 right-4 p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-4 right-4 p-1.5 hover:bg-neutral-800 rounded-lg text-on-surface-variant hover:text-white transition-colors cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -2825,33 +2827,33 @@ export default function WorkspaceEditor({
             <div className="space-y-3">
               <div className="flex gap-2">
                 <div className="w-16 space-y-1">
-                  <label className="text-[10px] text-neutral-400 font-bold uppercase">Ícone</label>
+                  <label className="text-[10px] text-on-surface-variant font-bold uppercase">Ícone</label>
                   <input 
                     type="text" 
                     value={newBoardEmoji} 
                     onChange={(e) => setNewBoardEmoji(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-850 rounded-lg p-2 text-center text-lg"
+                    className="w-full bg-neutral-950 border border-outline-variant rounded-lg p-2 text-center text-lg"
                     placeholder="📂"
                   />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <label className="text-[10px] text-neutral-400 font-bold uppercase font-sans">Nome da Pasta</label>
+                  <label className="text-[10px] text-on-surface-variant font-bold uppercase font-sans">Nome da Pasta</label>
                   <input 
                     type="text" 
                     value={newBoardName} 
                     onChange={(e) => setNewBoardName(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-850 rounded-lg p-2 text-xs text-white"
+                    className="w-full bg-neutral-950 border border-outline-variant rounded-lg p-2 text-xs text-white"
                     placeholder="Ex: Personagens Principais"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] text-neutral-400 font-bold uppercase font-sans">Descrição</label>
+                <label className="text-[10px] text-on-surface-variant font-bold uppercase font-sans">Descrição</label>
                 <textarea 
                   value={newBoardDesc} 
                   onChange={(e) => setNewBoardDesc(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-850 rounded-lg p-2 text-xs text-white h-20 resize-none font-sans"
+                  className="w-full bg-neutral-950 border border-outline-variant rounded-lg p-2 text-xs text-white h-20 resize-none font-sans"
                   placeholder="Descreva brevemente o propósito desta pasta..."
                 />
               </div>
@@ -2878,13 +2880,13 @@ export default function WorkspaceEditor({
       {/* MODAL 4: CREATE / EDIT PLANNING BLOCK MODAL */}
       {showCardModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 relative">
+          <div className="bg-surface dark:bg-surface border border-outline-variant rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 relative">
             <button 
               onClick={() => {
                 setShowCardModal(false);
                 setEditingCard(null);
               }}
-              className="absolute top-4 right-4 p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-4 right-4 p-1.5 hover:bg-neutral-800 rounded-lg text-on-surface-variant hover:text-white transition-colors cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -2895,33 +2897,33 @@ export default function WorkspaceEditor({
             <div className="space-y-3">
               <div className="flex gap-2">
                 <div className="w-16 space-y-1">
-                  <label className="text-[10px] text-neutral-400 font-bold uppercase">Ícone</label>
+                  <label className="text-[10px] text-on-surface-variant font-bold uppercase">Ícone</label>
                   <input 
                     type="text" 
                     value={cardFormEmoji} 
                     onChange={(e) => setCardFormEmoji(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-850 rounded-lg p-2 text-center text-lg"
+                    className="w-full bg-neutral-950 border border-outline-variant rounded-lg p-2 text-center text-lg"
                     placeholder="📝"
                   />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <label className="text-[10px] text-neutral-400 font-bold uppercase font-sans">Título do Bloco</label>
+                  <label className="text-[10px] text-on-surface-variant font-bold uppercase font-sans">Título do Bloco</label>
                   <input 
                     type="text" 
                     value={cardFormTitle} 
                     onChange={(e) => setCardFormTitle(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-850 rounded-lg p-2 text-xs text-white"
+                    className="w-full bg-neutral-950 border border-outline-variant rounded-lg p-2 text-xs text-white"
                     placeholder="Ex: Protagonista - Ficha"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] text-neutral-400 font-bold uppercase font-sans">Tipo de Elemento</label>
+                <label className="text-[10px] text-on-surface-variant font-bold uppercase font-sans">Tipo de Elemento</label>
                 <select 
                   value={cardFormType} 
                   onChange={(e) => setCardFormType(e.target.value as any)}
-                  className="w-full bg-neutral-950 border border-neutral-850 rounded-lg p-2 text-xs text-white"
+                  className="w-full bg-neutral-950 border border-outline-variant rounded-lg p-2 text-xs text-white"
                 >
                   <option value="character">Personagem</option>
                   <option value="location">Local</option>
@@ -2931,11 +2933,11 @@ export default function WorkspaceEditor({
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] text-neutral-400 font-bold uppercase font-sans">Conteúdo da Ficha</label>
+                <label className="text-[10px] text-on-surface-variant font-bold uppercase font-sans">Conteúdo da Ficha</label>
                 <textarea 
                   value={cardFormContent} 
                   onChange={(e) => setCardFormContent(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-850 rounded-lg p-2 text-xs text-white h-40 resize-none font-sans"
+                  className="w-full bg-neutral-950 border border-outline-variant rounded-lg p-2 text-xs text-white h-40 resize-none font-sans"
                   placeholder="Escreva livremente sobre este personagem, local, cronologia ou observação geral..."
                 />
               </div>
@@ -2981,10 +2983,10 @@ export default function WorkspaceEditor({
       {/* MODAL 5: ADD PAGE WIZARD MODAL */}
       {showAddPageModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 relative">
+          <div className="bg-surface dark:bg-surface border border-outline-variant rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 relative">
             <button 
               onClick={() => setShowAddPageModal(false)}
-              className="absolute top-4 right-4 p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-4 right-4 p-1.5 hover:bg-neutral-800 rounded-lg text-on-surface-variant hover:text-white transition-colors cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -2993,7 +2995,7 @@ export default function WorkspaceEditor({
             <div className="space-y-4">
               {/* 1. Choose Section */}
               <div className="space-y-1">
-                <label className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">1. Seção do Livro</label>
+                <label className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">1. Seção do Livro</label>
                 <div className="grid grid-cols-3 gap-2">
                   {([
                     { key: 'front', label: 'Pré-textual (Início)' },
@@ -3012,7 +3014,7 @@ export default function WorkspaceEditor({
                       className={`py-2 px-3 text-xs border rounded-xl text-center transition-all cursor-pointer font-sans ${
                         addPageSection === sec.key
                           ? 'border-indigo-500 bg-indigo-500/10 text-indigo-300 font-bold'
-                          : 'border-neutral-850 hover:bg-neutral-900 text-neutral-400 font-medium'
+                          : 'border-outline-variant hover:bg-surface-container-lowest text-on-surface-variant font-medium'
                       }`}
                     >
                       {sec.label}
@@ -3023,11 +3025,11 @@ export default function WorkspaceEditor({
 
               {/* 2. Choose Template Type */}
               <div className="space-y-1">
-                <label className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">2. Tipo de Página / Modelo</label>
+                <label className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">2. Tipo de Página / Modelo</label>
                 <select
                   value={addPageType}
                   onChange={(e) => setAddPageType(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-850 rounded-lg p-2.5 text-xs text-white"
+                  className="w-full bg-neutral-950 border border-outline-variant rounded-lg p-2.5 text-xs text-white"
                 >
                   {addPageSection === 'front' && (
                     <>
@@ -3058,12 +3060,12 @@ export default function WorkspaceEditor({
 
               {/* 3. Page Title */}
               <div className="space-y-1">
-                <label className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">3. Título da Página</label>
+                <label className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider block">3. Título da Página</label>
                 <input
                   type="text"
                   value={addPageTitle}
                   onChange={(e) => setAddPageTitle(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-850 rounded-lg p-2.5 text-xs text-white"
+                  className="w-full bg-neutral-950 border border-outline-variant rounded-lg p-2.5 text-xs text-white"
                   placeholder={PAGE_TEMPLATES[addPageType]?.title || 'Ex: Dedicatória Especial'}
                 />
               </div>
@@ -3089,9 +3091,9 @@ export default function WorkspaceEditor({
       {/* MODAL 6: TEMPLATES SELECTOR MODAL */}
       {showTemplatesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4 select-none">
-          <div className="bg-[#f7f3f2] dark:bg-[#09090b] border border-neutral-850 rounded-2xl w-full max-w-4xl h-[75vh] flex overflow-hidden shadow-2xl relative animate-fade-in">
+          <div className="bg-surface dark:bg-surface border border-outline-variant rounded-2xl w-full max-w-4xl h-[75vh] flex overflow-hidden shadow-2xl relative animate-fade-in">
             {/* Sidebar filter list */}
-            <div className="w-60 border-r border-neutral-900 bg-[#f7f3f2] dark:bg-[#0c0c0e] p-5 flex flex-col gap-4 shrink-0">
+            <div className="w-60 border-r border-outline-variant bg-surface dark:bg-[#0c0c0e] p-5 flex flex-col gap-4 shrink-0">
               <h3 className="font-sans font-bold text-sm text-neutral-300 uppercase tracking-widest pl-1">Ativos / Assets</h3>
               
               <div className="relative">
@@ -3100,9 +3102,9 @@ export default function WorkspaceEditor({
                   value={templateSearch}
                   onChange={(e) => setTemplateSearch(e.target.value)}
                   placeholder="Pesquisar..."
-                  className="w-full bg-neutral-950 border border-neutral-850 rounded-lg py-2 pl-8 pr-3 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
+                  className="w-full bg-neutral-950 border border-outline-variant rounded-lg py-2 pl-8 pr-3 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
                 />
-                <Search size={13} className="absolute left-2.5 top-3 text-neutral-500" />
+                <Search size={13} className="absolute left-2.5 top-3 text-on-surface-variant" />
               </div>
 
               <div className="flex flex-col gap-1 mt-2">
@@ -3119,7 +3121,7 @@ export default function WorkspaceEditor({
                     className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-sans text-left transition-all cursor-pointer ${
                       templateFilter === item.key
                         ? 'bg-indigo-600/10 border border-indigo-500/20 text-indigo-300 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
-                        : 'border border-transparent text-neutral-400 hover:bg-neutral-900/60 hover:text-neutral-200'
+                        : 'border border-transparent text-on-surface-variant hover:bg-surface-container-lowest/60 hover:text-on-surface'
                     }`}
                   >
                     <span>{item.emoji}</span>
@@ -3130,14 +3132,14 @@ export default function WorkspaceEditor({
             </div>
 
             {/* Right side templates list */}
-            <div className="flex-1 flex flex-col h-full bg-[#f7f3f2] dark:bg-[#09090b]">
-              <div className="flex justify-between items-center px-6 py-4 border-b border-neutral-900 select-none">
+            <div className="flex-1 flex flex-col h-full bg-surface dark:bg-surface">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-outline-variant select-none">
                 <span className="font-serif font-bold text-base text-white">
                   {templateFilter === 'all' ? 'Todos os Templates' : templateFilter}
                 </span>
                 <button 
                   onClick={() => setShowTemplatesModal(false)}
-                  className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                  className="p-1.5 hover:bg-neutral-800 rounded-lg text-on-surface-variant hover:text-white transition-colors cursor-pointer"
                 >
                   <X size={16} />
                 </button>
@@ -3163,16 +3165,16 @@ export default function WorkspaceEditor({
                   return filtered.map(tpl => (
                     <div 
                       key={tpl.title}
-                      className="flex items-center justify-between border-b border-neutral-900/80 pb-4 select-none"
+                      className="flex items-center justify-between border-b border-outline-variant/80 pb-4 select-none"
                     >
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-neutral-900 border border-neutral-850 rounded-xl flex items-center justify-center text-xl shrink-0">
+                        <div className="w-12 h-12 bg-surface-container-lowest border border-outline-variant rounded-xl flex items-center justify-center text-xl shrink-0">
                           {tpl.emoji}
                         </div>
                         <div className="space-y-0.5">
                           <h4 className="text-xs font-bold text-white font-sans">{tpl.title}</h4>
-                          <p className="text-neutral-400 text-[12px] leading-relaxed max-w-xl font-sans">{tpl.description}</p>
-                          <span className="text-[9px] bg-neutral-950 border border-neutral-850 text-neutral-500 font-semibold px-2 py-0.5 rounded font-mono uppercase tracking-wider block w-fit">
+                          <p className="text-on-surface-variant text-[12px] leading-relaxed max-w-xl font-sans">{tpl.description}</p>
+                          <span className="text-[9px] bg-neutral-950 border border-outline-variant text-on-surface-variant font-semibold px-2 py-0.5 rounded font-mono uppercase tracking-wider block w-fit">
                             {tpl.category}
                           </span>
                         </div>
@@ -3200,7 +3202,7 @@ export default function WorkspaceEditor({
       {/* MODAL 7: LIXEIRA GERAL MODAL */}
       {trashOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4">
-          <div className="bg-[#f7f3f2] dark:bg-[#0c0c0e] border border-neutral-200 dark:border-neutral-850 rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative animate-fade-in font-sans">
+          <div className="bg-surface dark:bg-[#0c0c0e] border border-neutral-200 dark:border-outline-variant rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative animate-fade-in font-sans">
             
             {/* Header */}
             <div className="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center select-none">
@@ -3219,23 +3221,23 @@ export default function WorkspaceEditor({
             <div className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
               {/* Deleted Chapters / Pages */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold text-neutral-450 dark:text-neutral-500 uppercase tracking-widest">Capítulos Excluídos</h4>
+                <h4 className="text-xs font-bold text-neutral-450 dark:text-on-surface-variant uppercase tracking-widest">Capítulos Excluídos</h4>
                 {deletedChapters.length === 0 ? (
-                  <div className="text-center py-6 border border-dashed border-neutral-300 dark:border-neutral-800 text-neutral-450 dark:text-neutral-550 text-xs rounded-xl font-sans italic">
+                  <div className="text-center py-6 border border-dashed border-neutral-300 dark:border-outline-variant text-neutral-450 dark:text-neutral-550 text-xs rounded-xl font-sans italic">
                     Nenhum capítulo na lixeira.
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {deletedChapters.map(chap => (
-                      <div key={chap.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-3.5 rounded-xl flex justify-between items-center text-sm shadow-sm transition-all hover:border-neutral-300 dark:hover:border-neutral-750">
+                      <div key={chap.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant p-3.5 rounded-xl flex justify-between items-center text-sm shadow-sm transition-all hover:border-neutral-300 dark:hover:border-neutral-750">
                         <div className="overflow-hidden mr-2">
                           <h5 className="font-serif font-bold text-neutral-900 dark:text-white truncate">{chap.title}</h5>
-                          <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono mt-0.5">Ordem de escrita: {chap.order}</p>
+                          <p className="text-[10px] text-on-surface-variant dark:text-on-surface-variant font-mono mt-0.5">Ordem de escrita: {chap.order}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <button 
                             onClick={() => {
-                              setChapters(prev => [...prev, chap].sort((a, b) => a.order - b.order));
+                              setChapters((prev: Chapter[]) => [...prev, chap].sort((a, b) => a.order - b.order));
                               setDeletedChapters(prev => prev.filter(c => c.id !== chap.id));
                             }}
                             className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-sans"
@@ -3261,19 +3263,19 @@ export default function WorkspaceEditor({
               </div>
 
               {/* Deleted Planning Cards */}
-              <div className="space-y-3 pt-4 border-t border-neutral-200 dark:border-neutral-850">
-                <h4 className="text-xs font-bold text-neutral-450 dark:text-neutral-500 uppercase tracking-widest font-sans">Cards de Planejamento</h4>
+              <div className="space-y-3 pt-4 border-t border-neutral-200 dark:border-outline-variant">
+                <h4 className="text-xs font-bold text-neutral-450 dark:text-on-surface-variant uppercase tracking-widest font-sans">Cards de Planejamento</h4>
                 {deletedPlanningCards.length === 0 ? (
-                  <div className="text-center py-6 border border-dashed border-neutral-300 dark:border-neutral-800 text-neutral-450 dark:text-neutral-550 text-xs rounded-xl font-sans italic">
+                  <div className="text-center py-6 border border-dashed border-neutral-300 dark:border-outline-variant text-neutral-450 dark:text-neutral-550 text-xs rounded-xl font-sans italic">
                     Nenhum card na lixeira.
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {deletedPlanningCards.map(card => (
-                      <div key={card.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-850 p-3.5 rounded-xl flex justify-between items-center text-sm shadow-sm transition-all hover:border-neutral-300 dark:hover:border-neutral-750">
+                      <div key={card.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant p-3.5 rounded-xl flex justify-between items-center text-sm shadow-sm transition-all hover:border-neutral-300 dark:hover:border-neutral-750">
                         <div className="overflow-hidden mr-2 flex-1">
                           <h5 className="font-serif font-bold text-neutral-900 dark:text-white truncate">{card.title}</h5>
-                          <p className="text-xs text-neutral-400 dark:text-neutral-500 truncate mt-0.5 max-w-[240px]">{card.content}</p>
+                          <p className="text-xs text-on-surface-variant dark:text-on-surface-variant truncate mt-0.5 max-w-[240px]">{card.content}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <button 
@@ -3318,12 +3320,12 @@ export default function WorkspaceEditor({
 
           {/* Panel */}
           <div
-            className="relative w-full max-w-xl bg-[#f7f3f2] dark:bg-[#0c0c0e] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl overflow-hidden animate-fade-in"
+            className="relative w-full max-w-xl bg-surface dark:bg-[#0c0c0e] border border-neutral-200 dark:border-outline-variant rounded-2xl shadow-2xl overflow-hidden animate-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Search input */}
-            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-neutral-200 dark:border-neutral-800">
-              <Search size={18} className="text-neutral-400 shrink-0" />
+            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-neutral-200 dark:border-outline-variant">
+              <Search size={18} className="text-on-surface-variant shrink-0" />
               <input
                 type="text"
                 autoFocus
@@ -3335,7 +3337,7 @@ export default function WorkspaceEditor({
               {globalSearchQuery && (
                 <button
                   onClick={() => setGlobalSearchQuery('')}
-                  className="text-neutral-400 hover:text-neutral-600 dark:hover:text-white transition-colors"
+                  className="text-on-surface-variant hover:text-neutral-600 dark:hover:text-white transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -3345,7 +3347,7 @@ export default function WorkspaceEditor({
             {/* Results */}
             <div className="max-h-80 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
               {globalSearchQuery.trim() === '' ? (
-                <div className="px-4 py-8 text-center text-sm text-neutral-400">
+                <div className="px-4 py-8 text-center text-sm text-on-surface-variant">
                   Digite para buscar em todo o seu projeto
                 </div>
               ) : (() => {
@@ -3369,7 +3371,7 @@ export default function WorkspaceEditor({
 
                 if (total === 0) {
                   return (
-                    <div className="px-4 py-8 text-center text-sm text-neutral-400 italic">
+                    <div className="px-4 py-8 text-center text-sm text-on-surface-variant italic">
                       Nenhum resultado para &quot;{globalSearchQuery}&quot;
                     </div>
                   );
@@ -3379,7 +3381,7 @@ export default function WorkspaceEditor({
                   <>
                     {chapterResults.length > 0 && (
                       <div>
-                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-neutral-400 bg-neutral-50 dark:bg-neutral-900/50">
+                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-neutral-50 dark:bg-surface-container-lowest/50">
                           Capítulos
                         </div>
                         {chapterResults.map(ch => {
@@ -3398,7 +3400,7 @@ export default function WorkspaceEditor({
                               className="w-full text-left px-4 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors"
                             >
                               <div className="text-sm font-semibold text-neutral-900 dark:text-white">{ch.title}</div>
-                              {snippet && <div className="text-xs text-neutral-400 mt-0.5 truncate">{snippet}</div>}
+                              {snippet && <div className="text-xs text-on-surface-variant mt-0.5 truncate">{snippet}</div>}
                             </button>
                           );
                         })}
@@ -3407,7 +3409,7 @@ export default function WorkspaceEditor({
 
                     {noteResults.length > 0 && (
                       <div>
-                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-neutral-400 bg-neutral-50 dark:bg-neutral-900/50">
+                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-neutral-50 dark:bg-surface-container-lowest/50">
                           Notas Fixadas
                         </div>
                         {noteResults.map(c => (
@@ -3421,7 +3423,7 @@ export default function WorkspaceEditor({
                             className="w-full text-left px-4 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors"
                           >
                             <div className="text-sm font-semibold text-neutral-900 dark:text-white">{c.title}</div>
-                            <div className="text-xs text-neutral-400 mt-0.5 truncate">{c.content}</div>
+                            <div className="text-xs text-on-surface-variant mt-0.5 truncate">{c.content}</div>
                           </button>
                         ))}
                       </div>
@@ -3429,7 +3431,7 @@ export default function WorkspaceEditor({
 
                     {boardResults.length > 0 && (
                       <div>
-                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-neutral-400 bg-neutral-50 dark:bg-neutral-900/50">
+                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-neutral-50 dark:bg-surface-container-lowest/50">
                           Quadros
                         </div>
                         {boardResults.map(b => (
@@ -3445,7 +3447,7 @@ export default function WorkspaceEditor({
                             className="w-full text-left px-4 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors"
                           >
                             <div className="text-sm font-semibold text-neutral-900 dark:text-white">{b.emoji} {b.name}</div>
-                            <div className="text-xs text-neutral-400 mt-0.5 truncate">{b.description}</div>
+                            <div className="text-xs text-on-surface-variant mt-0.5 truncate">{b.description}</div>
                           </button>
                         ))}
                       </div>
@@ -3456,7 +3458,7 @@ export default function WorkspaceEditor({
             </div>
 
             {/* Footer hint */}
-            <div className="px-4 py-2.5 border-t border-neutral-200 dark:border-neutral-800 flex gap-4 text-xs text-neutral-400">
+            <div className="px-4 py-2.5 border-t border-neutral-200 dark:border-outline-variant flex gap-4 text-xs text-on-surface-variant">
               <span><kbd className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-[10px]">Enter</kbd> para abrir</span>
               <span><kbd className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-[10px]">Esc</kbd> para fechar</span>
             </div>
@@ -3471,7 +3473,7 @@ export default function WorkspaceEditor({
         
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4">
-            <div className="bg-[#f7f3f2] dark:bg-[#0c0c0e] border border-neutral-200 dark:border-neutral-850 rounded-2xl w-full max-w-lg shadow-2xl relative overflow-hidden text-left animate-fade-in font-sans">
+            <div className="bg-surface dark:bg-[#0c0c0e] border border-neutral-200 dark:border-outline-variant rounded-2xl w-full max-w-lg shadow-2xl relative overflow-hidden text-left animate-fade-in font-sans">
               
               {/* Header section */}
               <div className={`${isDeleteAction ? 'bg-[#ef4444] text-white' : 'bg-indigo-600 text-white'} px-6 py-4 flex justify-between items-center`}>
@@ -3505,7 +3507,7 @@ export default function WorkspaceEditor({
                           dialogState.onConfirm(inputValue);
                         }
                       }}
-                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-sm text-neutral-800 dark:text-white placeholder-neutral-450 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-sans"
+                      className="w-full bg-white dark:bg-surface-container-lowest border border-neutral-200 dark:border-outline-variant rounded-xl px-3 py-2.5 text-sm text-neutral-800 dark:text-white placeholder-neutral-450 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-sans"
                     />
                   </div>
                 )}
@@ -3539,10 +3541,10 @@ export default function WorkspaceEditor({
         if (!card) return null;
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4">
-            <div className="bg-[#f7f3f2] dark:bg-[#0c0c0e] border border-neutral-200 dark:border-neutral-850 rounded-2xl w-full max-w-2xl p-6 shadow-2xl relative space-y-4 text-left animate-fade-in">
+            <div className="bg-surface dark:bg-[#0c0c0e] border border-neutral-200 dark:border-outline-variant rounded-2xl w-full max-w-2xl p-6 shadow-2xl relative space-y-4 text-left animate-fade-in">
               <button 
                 onClick={() => setActivePlanningCardId(null)}
-                className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 dark:hover:text-white cursor-pointer"
+                className="absolute top-4 right-4 text-on-surface-variant hover:text-neutral-600 dark:hover:text-white cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -3559,22 +3561,22 @@ export default function WorkspaceEditor({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-450 dark:text-neutral-500">Descrição / Conteúdo</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-450 dark:text-on-surface-variant">Descrição / Conteúdo</label>
                 <textarea 
                   value={card.content} 
                   rows={4}
                   onChange={(e) => setPlanningCards(prev => prev.map(c => c.id === card.id ? { ...c, content: e.target.value } : c))}
-                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-3 text-sm text-neutral-800 dark:text-white focus:outline-none leading-relaxed resize-none"
+                  className="w-full bg-white dark:bg-surface-container-lowest border border-neutral-200 dark:border-outline-variant rounded-xl p-3 text-sm text-neutral-800 dark:text-white focus:outline-none leading-relaxed resize-none"
                   placeholder="Digite o conteúdo do card..."
                 />
               </div>
 
               {/* Multiple Images Upload & Gallery */}
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-450 dark:text-neutral-500 block">Imagens anexadas</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-450 dark:text-on-surface-variant block">Imagens anexadas</label>
                 <div className="flex flex-wrap gap-2 items-center">
                   {card.images && card.images.map((img, i) => (
-                    <div key={i} className="relative group/img w-24 h-16 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden shadow-sm">
+                    <div key={i} className="relative group/img w-24 h-16 border border-neutral-200 dark:border-outline-variant rounded-xl overflow-hidden shadow-sm">
                       <img src={img} alt="Attached illustration" className="w-full h-full object-cover" />
                       <button 
                         onClick={() => {
@@ -3619,7 +3621,7 @@ export default function WorkspaceEditor({
                       };
                       input.click();
                     }}
-                    className="w-24 h-16 border-2 border-dashed border-neutral-300 dark:border-neutral-800 hover:border-indigo-500 flex flex-col items-center justify-center text-neutral-400 hover:text-indigo-500 rounded-xl transition-colors cursor-pointer"
+                    className="w-24 h-16 border-2 border-dashed border-neutral-300 dark:border-outline-variant hover:border-indigo-500 flex flex-col items-center justify-center text-on-surface-variant hover:text-indigo-500 rounded-xl transition-colors cursor-pointer"
                   >
                     <Plus size={16} />
                     <span className="text-[9px] font-bold uppercase mt-1">Adicionar</span>

@@ -54,7 +54,7 @@ const Instagram = ({ size = 16, className = "" }: { size?: number; className?: s
 
 interface AuthorProfileBuilderProps {
   profile: AuthorProfile;
-  setProfile: React.Dispatch<React.SetStateAction<AuthorProfile>>;
+  setProfile: (profile: AuthorProfile | ((prev: AuthorProfile) => AuthorProfile)) => void;
   books: Book[];
 }
 

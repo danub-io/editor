@@ -196,7 +196,7 @@
   /* =================================================================
      Radii — sharp corners everywhere
      ================================================================= */
-  --radius: 0;
+  --radius: 0.375rem;
   --radius-sm: 0;
   --radius-md: 0;
   --radius-lg: 0;
@@ -277,7 +277,7 @@
   --secondary-fg: #ffffff;
   --destructive: #ba1a1a;
   --input: transparent;
-  --radius: 0;
+  --radius: 0.375rem;
 
   /* Flowbite Theme Variables */
   --neutral-primary: #ffffff;
@@ -379,7 +379,7 @@
   --secondary-fg: #F7F7F5;
   --destructive: #ff6b6b;
   --input: transparent;
-  --radius: 0;
+  --radius: 0.375rem;
 
   /* Flowbite Theme Variables */
   --neutral-primary: #09090e;
@@ -520,7 +520,7 @@
 .emerald-btn, .primary-btn {
   background-color: var(--brand-color);
   color: #ffffff;
-  border-radius: 1.5rem; /* Standardized to 24px (rounded-3xl) */
+  border-radius: var(--radius);
   transition: all 0.2s ease-in-out;
   display: inline-flex;
   align-items: center;
@@ -535,7 +535,7 @@
   background-color: transparent;
   color: var(--on-surface);
   border: 1px solid var(--outline-variant);
-  border-radius: 1.5rem; /* Standardized to 24px (rounded-3xl) */
+  border-radius: var(--radius);
   transition: all 0.2s ease-in-out;
   display: inline-flex;
   align-items: center;
@@ -583,163 +583,6 @@
   border-radius: 3px;
 }
 
-/* LIGHT THEME STYLING OVERRIDES - Scoped to the editor workspace to keep LP unaffected */
-html.light .editor-workspace {
-  color-scheme: light;
-  background-color: var(--surface-container-low) !important;
-  color: var(--on-surface) !important;
-}
-
-/* Central canvas background wrapper: warm, comfortable grey-beige */
-html.light .editor-workspace .bg-\[\#09090b\] {
-  background-color: var(--surface-container-low) !important;
-  color: var(--on-surface) !important;
-}
-
-/* Main editor paper sheet: clean white to stand out and look like a physical paper page */
-html.light .editor-workspace .bg-neutral-900 {
-  background-color: var(--surface-container-lowest) !important;
-  color: var(--on-surface) !important;
-}
-
-/* Inset boxes, inputs and detail cards */
-html.light .editor-workspace .bg-neutral-950 {
-  background-color: var(--surface-container-low) !important;
-  color: var(--on-surface) !important;
-}
-
-/* Soft secondary backgrounds for highlights and specific cards */
-html.light .editor-workspace .bg-neutral-900\/60,
-html.light .editor-workspace .bg-neutral-950\/40,
-html.light .editor-workspace .bg-neutral-950\/20,
-html.light .editor-workspace .bg-neutral-900\/20,
-html.light .editor-workspace .bg-neutral-950\/60,
-html.light .editor-workspace .bg-\[\#0c0c0e\] {
-  background-color: var(--surface-container) !important;
-}
-
-/* Soft grey backgrounds for neutral components */
-html.light .editor-workspace .bg-neutral-800,
-html.light .editor-workspace .bg-neutral-850,
-html.light .editor-workspace .bg-neutral-750 {
-  background-color: var(--surface-container-high) !important;
-}
-
-/* Text overrides for light mode */
-html.light .editor-workspace .text-neutral-100 {
-  color: var(--on-surface) !important;
-}
-html.light .editor-workspace .text-neutral-200 {
-  color: var(--on-surface) !important;
-}
-html.light .editor-workspace .text-neutral-300 {
-  color: var(--on-surface) !important;
-}
-html.light .editor-workspace .text-neutral-400,
-html.light .editor-workspace .text-zinc-400,
-html.light .editor-workspace .text-gray-400 {
-  color: var(--on-surface-variant) !important;
-}
-html.light .editor-workspace .text-neutral-500,
-html.light .editor-workspace .text-gray-500 {
-  color: var(--on-surface-variant) !important;
-}
-
-/* Upper neutral range — Flowbite tokens resolve to light beige (near-white) */
-html.light .editor-workspace .text-neutral-700,
-html.light .editor-workspace .text-neutral-800,
-html.light .editor-workspace .text-neutral-850,
-html.light .editor-workspace .text-neutral-900 {
-  color: var(--on-surface) !important;
-}
-
-/* Standard white text in dark mode becomes dark neutral in light mode, except inside button elements */
-html.light .editor-workspace .text-white:not(button):not(button *) {
-  color: var(--on-surface) !important;
-}
-html.light .editor-workspace button .text-white,
-html.light .editor-workspace button.text-white {
-  color: #ffffff !important;
-}
-
-/* Border overrides - soft warm border tones */
-html.light .editor-workspace .border-neutral-900,
-html.light .editor-workspace .border-neutral-850,
-html.light .editor-workspace .border-neutral-800,
-html.light .editor-workspace .border-neutral-800\/80,
-html.light .editor-workspace .border-neutral-700,
-html.light .editor-workspace .border-neutral-700\/50,
-html.light .editor-workspace .border-neutral-850\/50,
-html.light .editor-workspace hr {
-  border-color: var(--outline-variant) !important;
-}
-
-/* Input fields and interactive controls */
-html.light .editor-workspace input,
-html.light .editor-workspace textarea,
-html.light .editor-workspace select {
-  background-color: var(--surface-container-lowest) !important;
-  color: var(--on-surface) !important;
-  border-color: var(--outline-variant) !important;
-}
-
-html.light .editor-workspace input:focus,
-html.light .editor-workspace textarea:focus,
-html.light .editor-workspace select:focus {
-  border-color: var(--brand-color) !important;
-  outline: none;
-}
-
-html.light .editor-workspace input::placeholder,
-html.light .editor-workspace textarea::placeholder {
-  color: #6b665f !important;
-}
-
-/* Primary/secondary text accents */
-html.light .editor-workspace .text-indigo-300,
-html.light .editor-workspace .text-indigo-400,
-html.light .editor-workspace .text-indigo-500 {
-  color: var(--brand-strong) !important;
-}
-
-html.light .editor-workspace .bg-indigo-500\/10,
-html.light .editor-workspace .bg-indigo-500\/15,
-html.light .editor-workspace .bg-indigo-500\/5 {
-  background-color: rgba(79, 70, 229, 0.08) !important;
-  color: var(--brand-strong) !important;
-}
-
-html.light .editor-workspace .hover\:bg-neutral-900:hover,
-html.light .editor-workspace .hover\:bg-neutral-950:hover,
-html.light .editor-workspace .hover\:bg-neutral-800:hover {
-  background-color: var(--surface-container-high) !important;
-  color: var(--on-surface) !important;
-}
-
-html.light .editor-workspace .bg-neutral-900\/40 {
-  background-color: var(--surface-container-high) !important;
-}
-
-
-/* Daily goal widget override in light mode */
-html.light .editor-workspace .bg-\[\#0f0f12\] {
-  background-color: var(--surface-container) !important;
-  border-color: var(--outline-variant) !important;
-}
-
-/* Modals overlays */
-html.light .editor-workspace .fixed.inset-0.z-50,
-html.light .editor-workspace .fixed.inset-0.bg-neutral-950\/85,
-html.light .editor-workspace .fixed.inset-0.bg-neutral-950\/80 {
-  background-color: rgba(0, 0, 0, 0.45) !important;
-}
-
-/* Keep active indicators clear */
-html.light .editor-workspace .border-indigo-500 {
-  border-color: var(--brand-strong) !important;
-}
-
-/* Fix mobile nav drawer overlay */
 .mobile-nav-drawer {
   background-color: var(--surface) !important;
   border-color: var(--outline-variant) !important;
@@ -769,3 +612,8 @@ html.light .primary-btn * {
   clip-path: var(--magicui-theme-vt-clip-from);
 }
 
+/* Fix mobile nav drawer overlay */
+.mobile-nav-drawer {
+  background-color: var(--surface);
+  border-color: var(--outline-variant);
+}
