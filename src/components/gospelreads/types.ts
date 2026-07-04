@@ -68,3 +68,46 @@ export interface BlogPost {
   date: string;
 }
 
+
+export interface PlanningCard {
+  id: string;
+  column: string;
+  title: string;
+  content: string;
+  tag?: 'Estrutura' | 'Personagem' | 'Trama' | 'Cenário' | 'Geral';
+  images?: string[];
+}
+
+export interface PlanningBoard {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+}
+
+export interface PlanningBlock {
+  id: string;
+  boardId: string;
+  title: string;
+  type: 'character' | 'location' | 'event' | 'note';
+  content: string;
+  emoji?: string;
+}
+
+export interface VersionSnapshot {
+  id: string;
+  timestamp: string;
+  title: string;
+  charCount: number;
+}
+
+export interface PlanningSection {
+  id: string;
+  name: string;
+}
+
+export interface Footnote {
+  id: string;
+  num: number;
+  text: string;
+}
