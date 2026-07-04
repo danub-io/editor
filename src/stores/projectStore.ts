@@ -107,6 +107,7 @@ const initialProjects: Project[] = [
       },
       theme: "light",
     },
+    targetWordCount: 50000,
     createdAt: date5DaysAgo,
     updatedAt: now,
   }

@@ -47,10 +47,13 @@ export default function ProjectPage() {
     (c) => c.status === "completed"
   ).length;
   const totalWords = chapters.reduce((acc, c) => acc + (c.wordCount || 0), 0);
-  const progress =
-    chapters.length > 0
-      ? Math.round((completedCount / chapters.length) * 100)
-      : 0;
+  const targetWords = activeProject?.targetWordCount || 50000;
+
+  const statusProgress = chapters.length > 0
+    ? Math.round((completedCount / chapters.length) * 100)
+    : 0;
+
+  const wordProgress = Math.min(Math.round((totalWords / targetWords) * 100), 100);
 
   // Show editor when a chapter is selected
   if (activeChapterId) {
@@ -122,19 +125,36 @@ export default function ProjectPage() {
               </p>
             </div>
 
-            {/* Progress */}
-            <div>
-              <h3 className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-3">
-                Progresso
-              </h3>
-              <div className="w-full bg-surface-container h-[1px] overflow-hidden">
-                <div
-                  className="bg-primary h-[1px] transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
+            {/* Progress / Word Target */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <div className="flex justify-between items-end mb-3">
+                  <h3 className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold">
+                    Status dos Capítulos
+                  </h3>
+                  <span className="text-xs text-on-surface-variant font-medium">{statusProgress}%</span>
+                </div>
+                <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-primary h-full transition-all duration-500 rounded-full"
+                    style={{ width: `${statusProgress}%` }}
+                  />
+                </div>
               </div>
-              <p className="text-xs text-on-surface-variant mt-2">
-              </p>
+              <div>
+                <div className="flex justify-between items-end mb-3">
+                  <h3 className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold">
+                    Meta de Palavras do Projeto
+                  </h3>
+                  <span className="text-xs text-on-surface-variant font-medium">{totalWords.toLocaleString("pt-BR")} / {targetWords.toLocaleString("pt-BR")}</span>
+                </div>
+                <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden relative">
+                  <div
+                    className="bg-[#00a2ed] h-full transition-all duration-500 rounded-full"
+                    style={{ width: `${wordProgress}%` }}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Chapter list */}
