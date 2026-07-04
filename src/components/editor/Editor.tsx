@@ -97,7 +97,10 @@ export function Editor({ chapterId }: { chapterId: string }) {
     },
     editorProps: {
       attributes: {
-        class: "focus:outline-none font-serif text-lg md:text-xl leading-relaxed text-gray-800 dark:text-zinc-200 min-h-[400px]",
+        class: cn(
+          "focus:outline-none font-serif text-lg leading-relaxed text-gray-800 dark:text-zinc-200 min-h-[600px]",
+          focusMode ? "text-xl md:text-2xl" : "text-base md:text-lg"
+        ),
       },
     },
   });
@@ -144,14 +147,19 @@ export function Editor({ chapterId }: { chapterId: string }) {
         </button>
       )}
 
-      <div className={cn("flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 flex justify-center", focusMode ? "pb-32 pt-20 lg:pt-32" : "pb-32 pt-16")}>
+      <div className={cn(
+        "flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 flex justify-center",
+        focusMode ? "pb-32 pt-20 lg:pt-32 bg-transparent" : "pb-32 pt-12 md:pt-16 bg-[#f0ede6] dark:bg-[#060608]"
+      )}>
         <div 
           className={cn(
-            "w-full transition-all duration-300 bg-white dark:bg-[#121214] border border-gray-200 dark:border-zinc-800 rounded-lg p-6 sm:p-10 md:p-16 shadow-sm",
-            focusMode ? "max-w-2xl" : "max-w-3xl"
+            "w-full transition-all duration-500",
+            focusMode
+              ? "max-w-2xl bg-transparent border-transparent p-0"
+              : "max-w-[800px] bg-white dark:bg-[#121214] border border-gray-200/60 dark:border-zinc-800/60 rounded-sm p-10 sm:p-16 md:p-24 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] min-h-[1056px]"
           )}
         >
-          <article>
+          <article className={cn(focusMode ? "max-w-2xl mx-auto" : "")}>
             {isEditingTitle ? (
               <input
                 ref={titleInputRef}
@@ -161,8 +169,8 @@ export function Editor({ chapterId }: { chapterId: string }) {
                 onBlur={handleSaveTitle}
                 onKeyDown={handleTitleKeyDown}
                 className={cn(
-                  "w-full bg-transparent font-serif text-3xl font-bold text-gray-900 dark:text-zinc-100 outline-none pb-0.5 border-b border-indigo-500",
-                  focusMode ? "mb-8 text-center" : "mb-6"
+                  "w-full bg-transparent font-serif font-bold text-gray-900 dark:text-zinc-100 outline-none pb-0.5 border-b border-indigo-500 transition-all",
+                  focusMode ? "mb-12 text-center text-4xl opacity-50 focus:opacity-100" : "mb-16 text-3xl md:text-4xl text-center"
                 )}
                 autoFocus
               />
@@ -170,15 +178,15 @@ export function Editor({ chapterId }: { chapterId: string }) {
               <h1
                 onClick={() => setIsEditingTitle(true)}
                 className={cn(
-                  "font-serif text-3xl font-bold text-gray-900 dark:text-zinc-100 outline-none cursor-pointer hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors",
-                  focusMode ? "mb-8 text-center" : "mb-6"
+                  "font-serif font-bold text-gray-900 dark:text-zinc-100 outline-none cursor-text transition-all",
+                  focusMode ? "mb-12 text-center text-4xl opacity-30 hover:opacity-100" : "mb-16 text-3xl md:text-4xl text-center hover:text-indigo-500 dark:hover:text-indigo-400"
                 )}
                 title="Clique para editar o título"
               >
                 {chapter?.title || "Sem Título"}
               </h1>
             )}
-            <div className={cn("outline-none font-serif text-lg leading-relaxed text-gray-800 dark:text-zinc-200")}>
+            <div className={cn("outline-none font-serif leading-relaxed text-gray-800 dark:text-zinc-300", focusMode ? "text-xl" : "text-lg")}>
               <EditorContent editor={editor} />
             </div>
           </article>

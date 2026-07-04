@@ -11,6 +11,7 @@ export interface Project {
   updatedAt: Date;
   coverImage?: string;
   settings: ProjectSettings;
+  targetWordCount?: number;
 }
 
 export interface ProjectSettings {

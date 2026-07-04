@@ -429,30 +429,6 @@
   }
 }
 
-/* ===== Scrollbar minimalista ===== */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--outline-variant);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--on-surface-variant);
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
 /* ===== Editor (ProseMirror / Tiptap) ===== */
 .ProseMirror {
   @apply outline-none min-h-[300px] py-8 px-0;
@@ -481,6 +457,30 @@
 
 .ProseMirror li {
   @apply mb-1;
+}
+
+/* ===== Scrollbar minimalista ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--on-surface-variant);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .ProseMirror blockquote {
