@@ -1,8 +1,8 @@
 export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
-import { locations } from "@/lib/schema";
+import { getDb } from "@gospelreads/db";
+import { locations } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
 
 export async function PUT(
