@@ -11,6 +11,9 @@ import ExporterModal from './workspace/modals/ExporterModal';
 import ProfileModal from './workspace/modals/ProfileModal';
 import EditorSettingsModal from './workspace/modals/EditorSettingsModal';
 import AddPageWizardModal from './workspace/modals/AddPageWizardModal';
+import { MobileNav } from './workspace/sidebar/MobileNav';
+import { KanbanBoard } from './workspace/kanban/KanbanBoard';
+import { PromptConfirmDialog } from './workspace/modals/PromptConfirmDialog';
 
 import AnimatedThemeToggler from '@/registry/magicui/animated-theme-toggler';
 import { 
@@ -59,6 +62,7 @@ import {
   Moon
 } from 'lucide-react';
 import { Chapter, WritingSettings, AuthorProfile, Book } from './types';
+import { toast } from "sonner";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -226,7 +230,17 @@ export default function WorkspaceEditor() {
     profile,
     setProfile,
     rightTab,
-    setRightTab
+    setRightTab,
+    planningSections, setPlanningSections,
+    planningCards, setPlanningCards,
+    pinnedCardsList, setPinnedCardsList,
+    deletedPlanningCards, setDeletedPlanningCards,
+    planningBoards, setPlanningBoards,
+    planningBlocks, setPlanningBlocks,
+    pinnedNotes, setPinnedNotes,
+    snapshots, setSnapshots,
+    footnotes, setFootnotes,
+    deletedChapters, setDeletedChapters
   } = useEditorStore();
   // Navigation & UI layouts
   const [leftTab, setLeftTab] = useState<'manuscript' | 'planning' | 'characters' | 'locations' | 'events' | 'statistics'>('manuscript');
@@ -248,7 +262,7 @@ export default function WorkspaceEditor() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showEditorSettingsModal, setShowEditorSettingsModal] = useState(false);
 
-  // Dialog elegante personalizado (substitui window.prompt e window.confirm)
+  // Dialog elegante personalizado (substitui window.prompt e customConfirm)
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean;
     type: 'prompt' | 'confirm';
@@ -356,6 +370,12 @@ export default function WorkspaceEditor() {
   const [addBoardInlineName, setAddBoardInlineName] = useState('');
 
   // Theme — unified via next-themes
+  const [trackChanges, setTrackChanges] = useState(false);
+  const [spellingActive, setSpellingActive] = useState(true);
+  const [suggestions, setSuggestions] = useState([
+    { id: 's-1', type: 'cliche', original: 'beijar o horizonte', replacement: 'tocar a linha do horizonte', comment: 'Considere evitar o clichê "beijar o horizonte".' },
+    { id: 's-2', type: 'repetition', original: 'folha', replacement: 'página', comment: 'Repetição da palavra "folha" em parágrafos adjacentes.' }
+  ]);
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
@@ -369,124 +389,26 @@ export default function WorkspaceEditor() {
 
   // Load and persist planning cards
   // Load and persist planning sections (Kanban columns)
-  const [planningSections, setPlanningSections] = useState<{ id: string; name: string }[]>(() => {
-    const saved = localStorage.getItem('gospelreads_planning_sections');
-    return saved ? JSON.parse(saved) : [
-      { id: 'planning', name: 'Planejamento' },
-      { id: 'ato1', name: 'Ato I: Partida' },
-      { id: 'ato2', name: 'Ato II: Iniciação' },
-      { id: 'ato3', name: 'Ato III: Retorno' }
-    ];
-  });
-
-  const [pinnedCardsList, setPinnedCardsList] = useState<string[]>(() => {
-    const saved = localStorage.getItem('gospelreads_pinned_cards_list');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [deletedPlanningCards, setDeletedPlanningCards] = useState<PlanningCard[]>(() => {
-    const saved = localStorage.getItem('gospelreads_deleted_planning_cards');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [planningCards, setPlanningCards] = useState<PlanningCard[]>(() => {
-    const saved = localStorage.getItem('gospelreads_planning_cards');
-    return saved ? JSON.parse(saved) : [
-      { id: 'pc-0', column: 'planning', title: 'Get started', content: 'Use boards to plan, organize, or research anything.', tag: 'Geral' },
-      { id: 'pc-0b', column: 'planning', title: 'Hero\'s Journey Example', content: 'Learn about the Hero\'s Journey.', tag: 'Estrutura' },
-      { id: 'pc-1', column: 'ato1', title: 'Mundo Comum', content: 'Apresentar a vida corriqueira do protagonista e seus conflitos internos.', tag: 'Estrutura' },
-      { id: 'pc-2', column: 'ato1', title: 'O Chamado para Escrita', content: 'Incentivo externo que desencadeia a necessidade de mudança.', tag: 'Trama' },
-      { id: 'pc-3', column: 'ato2', title: 'Travessia do Limiar', content: 'O herói assume o compromisso e adentra o mundo especial do editor.', tag: 'Estrutura' },
-      { id: 'pc-4', column: 'ato2', title: 'Novos Aliados', content: 'Aparecimento de personagens que ajudam na estruturação e estilo do texto.', tag: 'Personagem' },
-      { id: 'pc-5', column: 'ato3', title: 'A Provação Suprema', content: 'Resolução das tensões acumuladas em um clímax emocionante.', tag: 'Trama' },
-      { id: 'pc-6', column: 'ato3', title: 'Retorno com o Elixir', content: 'O livro é exportado e distribuído no marketplace com glória.', tag: 'Cenário' }
-    ];
-  });
-
-  // Load and persist planning boards and blocks
-  const [planningBoards, setPlanningBoards] = useState<PlanningBoard[]>(() => {
-    const saved = localStorage.getItem('gospelreads_planning_boards');
-    return saved ? JSON.parse(saved) : [
-      { id: 'pb-1', name: 'Personagens', emoji: '🎭', description: 'Fichas detalhadas dos protagonistas, antagonistas e secundários.' },
-      { id: 'pb-2', name: 'Locais', emoji: '🗺️', description: 'Pontos importantes do mundo, reinos, cidades e salas.' },
-      { id: 'pb-3', name: 'Eventos da Trama', emoji: '⏳', description: 'Acontecimentos marcantes da narrativa e marcos cronológicos.' }
-    ];
-  });
-
-  const [planningBlocks, setPlanningBlocks] = useState<PlanningBlock[]>(() => {
-    const saved = localStorage.getItem('gospelreads_planning_blocks');
-    return saved ? JSON.parse(saved) : [
-      { id: 'pbl-1', boardId: 'pb-1', title: 'Luana Costa', type: 'character', content: 'Protagonista. Escritora que descobre que suas palavras moldam o espaço sideral.', emoji: '✍️' },
-      { id: 'pbl-2', boardId: 'pb-2', title: 'Biblioteca de Alexandria II', type: 'location', content: 'Grande acervo localizado na órbita de Netuno.', emoji: '🚀' },
-      { id: 'pbl-3', boardId: 'pb-3', title: 'O Grande Alinhamento', type: 'event', content: 'Evento astronômico que conecta todas as dimensões literárias.', emoji: '🪐' }
-    ];
-  });
 
 
-  // Load and persist pinned notes
-  const [pinnedNotes, setPinnedNotes] = useState(() => {
-    return localStorage.getItem('gospelreads_pinned_notes') || 'Use este bloco de notas fixado para rascunhar ideias rápidas, nomes de personagens importantes, datas marcantes ou lembretes literários que precisam ficar à vista.';
-  });
 
-  // Load and persist version snapshots
-  const [snapshots, setSnapshots] = useState<VersionSnapshot[]>(() => {
-    const saved = localStorage.getItem('gospelreads_version_snapshots');
-    return saved ? JSON.parse(saved) : [
-      { id: 'snap-1', timestamp: '29/06/2026, 14:32', title: 'Rascunho Inicial do Cap 1', charCount: 820 },
-      { id: 'snap-2', timestamp: '29/06/2026, 18:15', title: 'Revisão Ortográfica Geral', charCount: 1150 }
-    ];
-  });
 
-  // Load and persist footnotes (Item 7)
-  const [footnotes, setFootnotes] = useState<Record<string, { id: string; num: number; text: string }[]>>(() => {
-    const saved = localStorage.getItem('gospelreads_footnotes');
-    return saved ? JSON.parse(saved) : {};
-  });
 
-  // Track changes & spelling recommendations
-  const [trackChanges, setTrackChanges] = useState(false);
-  const [spellingActive, setSpellingActive] = useState(true);
-  const [suggestions, setSuggestions] = useState([
-    { id: 's-1', type: 'cliche', original: 'beijar o horizonte', replacement: 'tocar a linha do horizonte', comment: 'Considere evitar o clichê "beijar o horizonte".' },
-    { id: 's-2', type: 'repetition', original: 'folha', replacement: 'página', comment: 'Repetição da palavra "folha" em parágrafos adjacentes.' }
-  ]);
-  const [deletedChapters, setDeletedChapters] = useState<Chapter[]>([]);
 
-  useEffect(() => {
-    localStorage.setItem('gospelreads_footnotes', JSON.stringify(footnotes));
-  }, [footnotes]);
 
-  useEffect(() => {
-    localStorage.setItem('gospelreads_planning_sections', JSON.stringify(planningSections));
-  }, [planningSections]);
 
-  useEffect(() => {
-    localStorage.setItem('gospelreads_pinned_cards_list', JSON.stringify(pinnedCardsList));
-  }, [pinnedCardsList]);
 
-  useEffect(() => {
-    localStorage.setItem('gospelreads_deleted_planning_cards', JSON.stringify(deletedPlanningCards));
-  }, [deletedPlanningCards]);
 
-  useEffect(() => {
-    localStorage.setItem('gospelreads_planning_cards', JSON.stringify(planningCards));
-  }, [planningCards]);
 
-  useEffect(() => {
-    localStorage.setItem('gospelreads_planning_boards', JSON.stringify(planningBoards));
-  }, [planningBoards]);
 
-  useEffect(() => {
-    localStorage.setItem('gospelreads_planning_blocks', JSON.stringify(planningBlocks));
-  }, [planningBlocks]);
 
-  useEffect(() => {
-    localStorage.setItem('gospelreads_pinned_notes', pinnedNotes);
-  }, [pinnedNotes]);
 
-  useEffect(() => {
-    localStorage.setItem('gospelreads_version_snapshots', JSON.stringify(snapshots));
-  }, [snapshots]);
+
+
+
+
+
+
 
   // Route routing checks for active exporter/profile tab
   useEffect(() => {
@@ -623,7 +545,7 @@ export default function WorkspaceEditor() {
   const deleteChapter = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (chapters.length <= 1) {
-      alert('Você precisa ter pelo menos um capítulo em seu manuscrito.');
+      toast('Você precisa ter pelo menos um capítulo em seu manuscrito.');
       return;
     }
     const chapterToDelete = chapters.find(c => c.id === id);
@@ -747,13 +669,13 @@ export default function WorkspaceEditor() {
     if (searchOnlyThisChapter) {
       const newContent = activeChapter.content.replace(regex, replaceText);
       setChapters((prev: Chapter[]) => prev.map(ch => ch.id === activeChapterId ? { ...ch, content: newContent } : ch));
-      alert('Substituição realizada com sucesso no capítulo atual.');
+      toast('Substituição realizada com sucesso no capítulo atual.');
     } else {
       setChapters((prev: Chapter[]) => prev.map(ch => {
         const updatedContent = ch.content.replace(regex, replaceText);
         return { ...ch, content: updatedContent };
       }));
-      alert('Substituição realizada em todos os capítulos do manuscrito.');
+      toast('Substituição realizada em todos os capítulos do manuscrito.');
     }
   };
 
@@ -803,7 +725,7 @@ export default function WorkspaceEditor() {
 
   const deletePlanningSection = async (id: string) => {
     if (planningSections.length <= 1) {
-      alert("Você precisa manter pelo menos uma seção.");
+      toast('Você precisa manter pelo menos uma seção.');
       return;
     }
     const confirm = await customConfirm(
@@ -851,7 +773,7 @@ export default function WorkspaceEditor() {
   // World Building / Boards helper functions
   const handleAddBoard = () => {
     if (!newBoardName.trim()) {
-      alert('Por favor, informe o nome da ficha.');
+      toast('Por favor, informe o nome da ficha.');
       return;
     }
     const newBoard: PlanningBoard = {
@@ -903,7 +825,7 @@ export default function WorkspaceEditor() {
 
   const handleSaveCard = () => {
     if (!cardFormTitle.trim()) {
-      alert('Por favor, insira o título do bloco.');
+      toast('Por favor, insira o título do bloco.');
       return;
     }
 
@@ -990,7 +912,7 @@ export default function WorkspaceEditor() {
            tpl.category === 'Settings' ? 'Cenário' : 'Trama'
     };
     setPlanningCards(prev => [...prev, newCard]);
-    alert(`Card "${tpl.title}" adicionado ao seu planejamento!`);
+    toast('Card adicionado ao seu planejamento!');
   };
 
   const renderManuscriptItem = (ch: Chapter, idx: number, arr: Chapter[]) => (
@@ -1045,7 +967,15 @@ export default function WorkspaceEditor() {
   const [activeRightTool, setActiveRightTool] = useState<string | null>(null);
 
   return (
-    <div className="w-full flex bg-surface dark:bg-surface h-screen max-h-screen overflow-hidden relative editor-workspace">
+        <div className="w-full flex bg-surface dark:bg-surface h-screen max-h-screen overflow-hidden relative editor-workspace flex-col lg:flex-row">
+      <MobileNav
+        leftTab={leftTab} setLeftTab={setLeftTab}
+        isLeftPanelOpen={isLeftPanelOpen} setIsLeftPanelOpen={setIsLeftPanelOpen}
+        setShowProfileModal={setShowProfileModal} setGlobalSearchOpen={setGlobalSearchOpen}
+        setTrashOpen={setTrashOpen} setShowExporterModal={setShowExporterModal}
+        setShowEditorSettingsModal={setShowEditorSettingsModal}
+        profile={profile}
+      />
       
       {/* COLLAPSIBLE LEFT SIDEBAR ICON STRIP */}
       {!isDistractionFree && (
@@ -1502,9 +1432,10 @@ export default function WorkspaceEditor() {
                           </div>
                         </div>
                         <button 
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            if (window.confirm('Excluir esta ficha?')) {
+                            const confirm = await customConfirm('Excluir ficha', 'Excluir esta ficha?');
+                             if (confirm) {
                               setPlanningBlocks(prev => prev.filter(b => b.id !== block.id));
                             }
                           }}
@@ -1564,9 +1495,10 @@ export default function WorkspaceEditor() {
                           </div>
                         </div>
                         <button 
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            if (window.confirm('Excluir esta ficha?')) {
+                            const confirm = await customConfirm('Excluir ficha', 'Excluir esta ficha?');
+                             if (confirm) {
                               setPlanningBlocks(prev => prev.filter(b => b.id !== block.id));
                             }
                           }}
@@ -1626,9 +1558,10 @@ export default function WorkspaceEditor() {
                           </div>
                         </div>
                         <button 
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            if (window.confirm('Excluir esta ficha?')) {
+                            const confirm = await customConfirm('Excluir ficha', 'Excluir esta ficha?');
+                             if (confirm) {
                               setPlanningBlocks(prev => prev.filter(b => b.id !== block.id));
                             }
                           }}
@@ -1728,8 +1661,8 @@ export default function WorkspaceEditor() {
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-on-surface-variant">{activeWords} / {settings.dailyGoal} pal.</span>
                       <button
-                        onClick={() => {
-                          const goal = window.prompt('Ajustar meta diária de palavras do capítulo:', settings.dailyGoal.toString());
+                        onClick={async () => {
+                          const goal = await customPrompt('Ajustar meta diária de palavras do capítulo:', '', settings.dailyGoal.toString());
                           if (goal) {
                             const num = parseInt(goal, 10);
                             if (!isNaN(num) && num > 0) {
@@ -2476,7 +2409,7 @@ export default function WorkspaceEditor() {
                             
                             textEl.value = '';
                           } else {
-                            alert("Por favor, clique na área de escrita onde deseja inserir a nota.");
+                            toast('Por favor, clique na área de escrita onde deseja inserir a nota.');
                           }
                         }}
                         className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-xl transition-all cursor-pointer"
@@ -3489,73 +3422,16 @@ export default function WorkspaceEditor() {
       )}
 
       {/* MODAL 9: CUSTOM STYLED DIALOG (PROMPT / CONFIRM) */}
-      {dialogState.isOpen && (() => {
-        let inputValue = dialogState.defaultValue;
-        const isDeleteAction = dialogState.title.toLowerCase().includes('excluir') || dialogState.title.toLowerCase().includes('delete') || dialogState.title.toLowerCase().includes('remover') || dialogState.title.toLowerCase().includes('confirmar');
-        
-        return (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4">
-            <div className="bg-surface dark:bg-[#0c0c0e] border border-neutral-200 dark:border-outline-variant rounded-2xl w-full max-w-lg shadow-2xl relative overflow-hidden text-left animate-fade-in font-sans">
-              
-              {/* Header section */}
-              <div className={`${isDeleteAction ? 'bg-[#ef4444] text-white' : 'bg-indigo-600 text-white'} px-6 py-4 flex justify-between items-center`}>
-                <h3 className="font-sans font-bold text-lg leading-none">
-                  {dialogState.title}
-                </h3>
-                <button 
-                  onClick={dialogState.onCancel}
-                  className="text-white/80 hover:text-white transition-colors cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Body message section */}
-              <div className="p-6 space-y-4">
-                <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed font-sans font-medium">
-                  {dialogState.message}
-                </p>
-
-                {dialogState.type === 'prompt' && (
-                  <div className="pt-1">
-                    <input
-                      type="text"
-                      defaultValue={dialogState.defaultValue}
-                      placeholder={dialogState.placeholder}
-                      autoFocus
-                      onChange={(e) => { inputValue = e.target.value; }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          dialogState.onConfirm(inputValue);
-                        }
-                      }}
-                      className="w-full bg-white dark:bg-surface-container-lowest border border-neutral-200 dark:border-outline-variant rounded-xl px-3 py-2.5 text-sm text-neutral-800 dark:text-white placeholder-neutral-450 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-sans"
-                    />
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    onClick={dialogState.onCancel}
-                    className="px-5 py-2.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg text-sm font-bold text-neutral-700 dark:text-neutral-350 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors cursor-pointer font-sans"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => {
-                      dialogState.onConfirm(inputValue);
-                    }}
-                    className={`px-5 py-2.5 rounded-lg text-sm font-bold text-white transition-colors cursor-pointer font-sans ${isDeleteAction ? 'bg-[#ef4444] hover:bg-[#dc2626]' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-                  >
-                    {isDeleteAction ? 'Delete' : 'Confirm'}
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        );
-      })()}
+      <PromptConfirmDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        defaultValue={dialogState.defaultValue}
+        placeholder={dialogState.placeholder}
+        onConfirm={dialogState.onConfirm}
+        onCancel={dialogState.onCancel}
+      />
 
       {/* PLANNING CARD DETAILS MODAL OVERLAY (Item 3) */}
       {activePlanningCardId && (() => {
