@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-core.json",
+  "packageManager": "pnpm",
+  "reporters": ["html", "clear-text", "progress"],
+  "testRunner": "vitest",
+  "testRunnerNodeArgs": [],
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "coverageAnalysis": "perTest",
+  "mutate": ["src/stores/**/*.ts"]
+}
