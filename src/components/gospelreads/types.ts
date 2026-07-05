@@ -96,9 +96,12 @@ export interface PlanningBlock {
 
 export interface VersionSnapshot {
   id: string;
+  chapterId?: string;
+  content?: string;
   timestamp: string;
   title: string;
   charCount: number;
+  isAuto?: boolean;
 }
 
 export interface PlanningSection {

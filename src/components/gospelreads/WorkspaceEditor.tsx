@@ -68,7 +68,7 @@ import {
   Sun,
   Moon
 } from 'lucide-react';
-import { Chapter, WritingSettings, AuthorProfile, Book } from './types';
+import { Chapter, WritingSettings, AuthorProfile, Book, VersionSnapshot } from './types';
 import { toast } from "sonner";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -218,12 +218,6 @@ interface PlanningBlock {
   emoji?: string;
 }
 
-interface VersionSnapshot {
-  id: string;
-  timestamp: string;
-  title: string;
-  charCount: number;
-}
 
 export default function WorkspaceEditor() {
   const {
@@ -647,6 +641,41 @@ export default function WorkspaceEditor() {
     // Average reading speed: 200 words per minute
     return Math.max(1, Math.round(totalW / 200));
   };
+
+
+  // Auto-save logic
+  useEffect(() => {
+    if (!activeChapter) return;
+
+    // Autosave snapshot every 60 seconds if content has changed
+    const interval = setInterval(() => {
+      if (saveStatus === 'saved') return; // Only save if there was a modification
+
+      const newSnap: VersionSnapshot = {
+        id: `snap-1783220373150`,
+        chapterId: activeChapter.id,
+        content: activeChapter.content,
+        timestamp: new Date().toLocaleString('pt-BR'),
+        title: `Salvo automaticamente`,
+        charCount: activeChapter.content.length,
+        isAuto: true
+      };
+
+      setSnapshots(prev => {
+        // Keep maximum of 10 autosaves per chapter to avoid blowing up storage
+        const chapterSnaps = prev.filter(s => s.chapterId === activeChapter.id && s.isAuto);
+        let nextPrev = prev;
+        if (chapterSnaps.length >= 10) {
+          const oldestAuto = chapterSnaps.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())[0];
+          nextPrev = prev.filter(s => s.id !== oldestAuto.id);
+        }
+        return [newSnap, ...nextPrev];
+      });
+      setSaveStatus('saved');
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [activeChapter, saveStatus, setSnapshots]);
 
   // Snapshots
   const createSnapshot = async () => {
