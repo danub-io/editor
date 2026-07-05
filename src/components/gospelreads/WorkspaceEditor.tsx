@@ -12,6 +12,13 @@ import ProfileModal from './workspace/modals/ProfileModal';
 import EditorSettingsModal from './workspace/modals/EditorSettingsModal';
 import AddPageWizardModal from './workspace/modals/AddPageWizardModal';
 import { MobileNav } from './workspace/sidebar/MobileNav';
+import { LeftSidebar } from './workspace/sidebar/LeftSidebar';
+import { RightSidebar } from './workspace/sidebar/RightSidebar';
+import { RightIconStrip } from './workspace/sidebar/RightIconStrip';
+import { EditorCanvas } from './workspace/editor/EditorCanvas';
+import { TrashModal } from './workspace/sidebar/TrashModal';
+import { GlobalSearchModal } from './workspace/sidebar/GlobalSearchModal';
+import { DesktopNav } from './workspace/sidebar/DesktopNav';
 import { KanbanBoard } from './workspace/kanban/KanbanBoard';
 import { PromptConfirmDialog } from './workspace/modals/PromptConfirmDialog';
 
@@ -61,7 +68,7 @@ import {
   Sun,
   Moon
 } from 'lucide-react';
-import { Chapter, WritingSettings, AuthorProfile, Book } from './types';
+import { Chapter, WritingSettings, AuthorProfile, Book, VersionSnapshot } from './types';
 import { toast } from "sonner";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -668,6 +675,41 @@ export default function WorkspaceEditor() {
     return Math.max(1, Math.round(totalW / 200));
   };
 
+
+  // Auto-save logic
+  useEffect(() => {
+    if (!activeChapter) return;
+
+    // Autosave snapshot every 60 seconds if content has changed
+    const interval = setInterval(() => {
+      if (saveStatus === 'saved') return; // Only save if there was a modification
+
+      const newSnap: VersionSnapshot = {
+        id: `snap-1783220373150`,
+        chapterId: activeChapter.id,
+        content: activeChapter.content,
+        timestamp: new Date().toLocaleString('pt-BR'),
+        title: `Salvo automaticamente`,
+        charCount: activeChapter.content.length,
+        isAuto: true
+      };
+
+      setSnapshots(prev => {
+        // Keep maximum of 10 autosaves per chapter to avoid blowing up storage
+        const chapterSnaps = prev.filter(s => s.chapterId === activeChapter.id && s.isAuto);
+        let nextPrev = prev;
+        if (chapterSnaps.length >= 10) {
+          const oldestAuto = chapterSnaps.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())[0];
+          nextPrev = prev.filter(s => s.id !== oldestAuto.id);
+        }
+        return [newSnap, ...nextPrev];
+      });
+      setSaveStatus('saved');
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [activeChapter, saveStatus, setSnapshots]);
+
   // Snapshots
   const createSnapshot = async () => {
     if (!activeChapter) return;
@@ -945,53 +987,7 @@ export default function WorkspaceEditor() {
     toast('Card adicionado ao seu planejamento!');
   };
 
-  const renderManuscriptItem = (ch: Chapter, idx: number, arr: Chapter[]) => (
-    <div
-      key={ch.id}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('text/plain', ch.id);
-        e.dataTransfer.setData('dragType', 'chapter');
-      }}
-      onClick={() => setActiveChapterId(ch.id)}
-      className={`group flex items-center justify-between p-2.5 cursor-pointer border rounded-xl cursor-grab active:cursor-grabbing ${
-        ch.id === activeChapterId 
-          ? 'border-indigo-500 bg-indigo-500/10 font-medium text-indigo-300' 
-          : 'border-transparent text-on-surface-variant hover:border-outline-variant hover:bg-surface-container-lowest/40 hover:text-on-surface'
-      } transition-all duration-150`}
-    >
-      <div className="flex items-center gap-2 overflow-hidden">
-        <span className="text-[11px] font-mono text-on-surface-variant shrink-0">#{idx + 1}</span>
-        <span className="text-sm truncate font-serif">{ch.title || 'Sem título'}</span>
-      </div>
-      
-      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <button 
-          onClick={(e) => { e.stopPropagation(); moveChapterInSection(ch.id, 'up'); }}
-          disabled={idx === 0}
-          className="p-0.5 hover:bg-neutral-800 text-on-surface-variant hover:text-on-surface rounded disabled:opacity-30"
-          title="Subir"
-        >
-          <ChevronUp size={12} />
-        </button>
-        <button 
-          onClick={(e) => { e.stopPropagation(); moveChapterInSection(ch.id, 'down'); }}
-          disabled={idx === arr.length - 1}
-          className="p-0.5 hover:bg-neutral-800 text-on-surface-variant hover:text-on-surface rounded disabled:opacity-30"
-          title="Descer"
-        >
-          <ChevronDown size={12} />
-        </button>
-        <button 
-          onClick={(e) => deleteChapter(ch.id, e)}
-          className="p-0.5 hover:bg-red-950/40 text-red-400 rounded"
-          title="Excluir"
-        >
-          <Trash2 size={12} />
-        </button>
-      </div>
-    </div>
-  );
+
 
   // Local state for right active sidebar tool
   const [activeRightTool, setActiveRightTool] = useState<string | null>(null);
@@ -1009,708 +1005,60 @@ export default function WorkspaceEditor() {
       
       {/* COLLAPSIBLE LEFT SIDEBAR ICON STRIP */}
       {!isDistractionFree && (
-        <aside className="w-16 border-r border-outline-variant bg-surface dark:bg-surface flex flex-col justify-between items-center py-4 shrink-0 select-none hidden lg:flex">
-          {/* Top: manuscript + planning only */}
-          <div className="space-y-3.5 flex flex-col items-center">
-            <button
-              onClick={() => {
-                if (leftTab === 'manuscript' && isLeftPanelOpen) {
-                  setIsLeftPanelOpen(false);
-                } else {
-                  setLeftTab('manuscript');
-                  setIsLeftPanelOpen(true);
-                }
-              }}
-              className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                leftTab === 'manuscript' && isLeftPanelOpen
-                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                  : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
-              }`}
-              title="Manuscrito"
-            >
-              <BookOpen size={18} />
-            </button>
-
-            <button
-              onClick={() => {
-                if (leftTab === 'planning' && !isLeftPanelOpen) {
-                  setLeftTab('planning');
-                } else {
-                  setLeftTab('planning');
-                  setIsLeftPanelOpen(false);
-                }
-              }}
-              className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                leftTab === 'planning'
-                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                  : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
-              }`}
-              title="Planejamento"
-            >
-              <Layout size={18} />
-            </button>
-          </div>
-
-          {/* Bottom: avatar, search, trash, theme — bottom-to-top */}
-          <div className="flex flex-col-reverse items-center gap-3">
-            {/* Avatar — foto de perfil clicável */}
-            <button
-              onClick={() => setShowProfileModal(true)}
-              className="w-8 h-8 rounded-full overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-all cursor-pointer focus:outline-none focus:border-indigo-500"
-              title="Configurações de Perfil"
-            >
-              <img
-                src={
-                  profile.avatarUrl ||
-                  `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(profile.name || 'autor')}&backgroundColor=6366f1,818cf8&backgroundType=gradientLinear`
-                }
-                alt={profile.name || 'Perfil'}
-                className="w-full h-full object-cover"
-              />
-            </button>
-
-            {/* Global search */}
-            <button
-              onClick={() => setGlobalSearchOpen(o => !o)}
-              className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                globalSearchOpen
-                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                  : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
-              }`}
-              title="Busca global"
-            >
-              <Search size={18} />
-            </button>
-
-            {/* Trash */}
-            <button
-              onClick={() => setTrashOpen(o => !o)}
-              className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                trashOpen
-                  ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                  : 'border-transparent text-on-surface-variant hover:text-white hover:bg-surface-container-lowest'
-              }`}
-              title="Lixeira"
-            >
-              <Trash2 size={18} />
-            </button>
-
-            {/* Theme toggle using AnimatedThemeToggler */}
-            <div className="p-2 rounded-xl">
-              <AnimatedThemeToggler 
-                theme={isDark ? 'dark' : 'light'} 
-                onThemeChange={(newTheme) => setTheme(newTheme)} 
-              />
-            </div>
-          </div>
-        </aside>
+        <DesktopNav
+          leftTab={leftTab}
+          setLeftTab={setLeftTab}
+          isLeftPanelOpen={isLeftPanelOpen}
+          setIsLeftPanelOpen={setIsLeftPanelOpen}
+          setShowProfileModal={setShowProfileModal}
+          setGlobalSearchOpen={setGlobalSearchOpen}
+          globalSearchOpen={globalSearchOpen}
+          trashOpen={trashOpen}
+          setTrashOpen={setTrashOpen}
+          profile={profile}
+          isDark={isDark}
+          setTheme={setTheme}
+        />
       )}
 
       {/* LEFT SIDEBAR: MANUSCRITO OR PLANEJAMENTO */}
       {!isDistractionFree && isLeftPanelOpen && (
-        <aside className="w-80 border-r border-neutral-200 dark:border-outline-variant bg-surface dark:bg-[#0c0c0e] flex flex-col justify-between shrink-0 hidden lg:flex select-none">
-          <div className="flex flex-col h-full overflow-hidden">
-            
-            {/* Sidebar Title Header with Close Button */}
-            <div className="p-4 border-b border-neutral-200 dark:border-outline-variant flex items-center justify-between gap-3 bg-surface dark:bg-surface">
-              <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant font-sans select-none">
-                {leftTab === 'manuscript' && 'Manuscrito'}
-                {leftTab === 'planning' && 'Quadro de Plotagem'}
-                {leftTab === 'characters' && 'Personagens'}
-                {leftTab === 'locations' && 'Locais'}
-                {leftTab === 'events' && 'Eventos da Trama'}
-                {leftTab === 'statistics' && 'Estatísticas'}
-              </span>
-              <button 
-                onClick={() => setIsLeftPanelOpen(false)} 
-                className="p-1.5 hover:bg-neutral-800 text-on-surface-variant hover:text-white rounded-xl transition-colors cursor-pointer"
-                title="Recolher Painel"
-              >
-                <X size={14} />
-              </button>
-            </div>
-
-            {/* Render left Tab: Manuscript Chapters manager */}
-            {leftTab === 'manuscript' && (
-              <div className="p-5 flex-1 flex flex-col overflow-y-auto justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex flex-col gap-1 select-none">
-                      <span className="text-xs font-bold tracking-widest text-indigo-400 uppercase flex items-center gap-2">
-                        <FolderOpen size={13} /> Estrutura ({chapters.length} Caps)
-                      </span>
-                      <span className="flex items-center gap-1 text-[10px] text-on-surface-variant font-mono">
-                        <span className={`w-1 h-1 rounded-full ${
-                          saveStatus === 'saved' ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]' :
-                          saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' : 'bg-gray-500'
-                        }`} />
-                        {saveStatus === 'saved' ? 'Sincronizado' :
-                         saveStatus === 'saving' ? 'Salvando...' : 'Não salvo'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
-                    {/* 1. FRONT MATTER SECTION */}
-                    <div className="space-y-1">
-                      <div className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant pl-1 py-1 border-b border-outline-variant flex items-center justify-between select-none">
-                        <span>Páginas Iniciais</span>
-                        <button 
-                          onClick={triggerAddFrontPage}
-                          className="text-xs text-indigo-400 hover:text-white cursor-pointer font-bold animate-pulse"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div className="space-y-1">
-                        {chapters
-                          .filter(ch => ch.section === 'front')
-                          .sort((a, b) => a.order - b.order)
-                          .map((ch, idx, arr) => renderManuscriptItem(ch, idx, arr))}
-                        {chapters.filter(ch => ch.section === 'front').length === 0 && (
-                          <div className="text-xs text-on-surface-variant pl-2 italic">Nenhuma página inicial</div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 2. BODY SECTION (MAIN CONTENT & PARTS) */}
-                    <div className="space-y-1">
-                      <div 
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          const chapterId = e.dataTransfer.getData('text/plain');
-                          const dragType = e.dataTransfer.getData('dragType');
-                          if (dragType === 'chapter' && chapterId) {
-                            setChapters((prev: Chapter[]) => prev.map(c => c.id === chapterId ? { ...c, partId: undefined } : c));
-                          }
-                        }}
-                        className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant pl-1 py-1 border-b border-outline-variant flex items-center justify-between select-none"
-                      >
-                        <span>Conteúdo Principal</span>
-                        <button 
-                          onClick={triggerAddBodyPage}
-                          className="text-xs text-indigo-400 hover:text-white cursor-pointer font-bold"
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      <div className="space-y-2.5 pt-1.5">
-                        {(() => {
-                          const bodyItems = chapters.filter(ch => ch.section === 'body' || !ch.section);
-                          const parts = bodyItems.filter(ch => ch.type === 'part').sort((a, b) => a.order - b.order);
-                          const rootChapters = bodyItems.filter(ch => ch.type !== 'part' && !ch.partId).sort((a, b) => a.order - b.order);
-
-                          return (
-                            <div className="space-y-2">
-                              {/* Parts and nested chapters */}
-                              {parts.map((part) => {
-                                const partChapters = bodyItems.filter(ch => ch.type !== 'part' && ch.partId === part.id).sort((a, b) => a.order - b.order);
-                                return (
-                                  <div 
-                                    key={part.id} 
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onDrop={(e) => {
-                                      e.stopPropagation();
-                                      const chapterId = e.dataTransfer.getData('text/plain');
-                                      const dragType = e.dataTransfer.getData('dragType');
-                                      if (dragType === 'chapter' && chapterId && chapterId !== part.id) {
-                                        setChapters((prev: Chapter[]) => prev.map(c => c.id === chapterId ? { ...c, partId: part.id } : c));
-                                      }
-                                    }}
-                                    className="bg-surface-container-lowest/30 border border-outline-variant rounded-xl p-2.5 space-y-2"
-                                  >
-                                    <div className="flex justify-between items-center select-none border-b border-outline-variant pb-1.5">
-                                      <span 
-                                        onClick={() => setActiveChapterId(part.id)}
-                                        className={`text-sm font-bold text-on-surface flex items-center gap-1.5 cursor-pointer hover:text-indigo-400 transition-colors ${
-                                          part.id === activeChapterId ? 'text-indigo-400 font-semibold' : ''
-                                        }`}
-                                      >
-                                        📁 {part.title}
-                                      </span>
-                                      <div className="flex items-center gap-2">
-                                        <button 
-                                          onClick={() => triggerAddChapterToPart(part.id, part.title)}
-                                          className="text-[11px] text-indigo-400 hover:text-white cursor-pointer font-bold"
-                                          title="Adicionar capítulo a esta parte"
-                                        >
-                                          + Cap
-                                        </button>
-                                        <button 
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            triggerDeletePart(part.id, part.title);
-                                          }}
-                                          className="text-on-surface-variant hover:text-red-400 cursor-pointer"
-                                          title="Excluir parte"
-                                        >
-                                          <Trash2 size={11} />
-                                        </button>
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="space-y-1 pl-3.5 border-l border-outline-variant">
-                                      {partChapters.map((ch, idx, arr) => renderManuscriptItem(ch, idx, arr))}
-                                      {partChapters.length === 0 && (
-                                        <div className="text-[10px] text-neutral-600 italic select-none py-1">Arraste capítulos aqui</div>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-
-                              {/* Root chapters */}
-                              <div className="space-y-1">
-                                {rootChapters.map((ch, idx, arr) => renderManuscriptItem(ch, idx, arr))}
-                              </div>
-
-                              {bodyItems.length === 0 && (
-                                <div className="text-xs text-on-surface-variant pl-2 italic">Nenhum capítulo ou parte criada</div>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-
-                    {/* 3. BACK MATTER SECTION */}
-                    <div className="space-y-1">
-                      <div className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant pl-1 py-1 border-b border-outline-variant flex items-center justify-between select-none">
-                        <span>Páginas Finais</span>
-                        <button 
-                          onClick={triggerAddBackPage}
-                          className="text-xs text-indigo-400 hover:text-white cursor-pointer font-bold"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div className="space-y-1">
-                        {chapters
-                          .filter(ch => ch.section === 'back')
-                          .sort((a, b) => a.order - b.order)
-                          .map((ch, idx, arr) => renderManuscriptItem(ch, idx, arr))}
-                        {chapters.filter(ch => ch.section === 'back').length === 0 && (
-                          <div className="text-xs text-on-surface-variant pl-2 italic">Nenhuma página final</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Render left Tab: Interactive Kanban Planning Board — hidden, planning goes full-screen */}
-            {leftTab === 'planning' && false && (
-              <div className="p-4 flex-1 flex flex-col overflow-y-auto space-y-4">
-                <div className="flex justify-between items-center select-none">
-                  <span className="text-sm font-bold tracking-widest text-indigo-400 uppercase flex items-center gap-1.5 font-sans">
-                    <Layout size={14} /> Quadro de Plotagem
-                  </span>
-                  <p className="text-xs text-on-surface-variant font-mono">Três Atos</p>
-                </div>
-
-                {/* Column lists (vertical mini bento stacks) */}
-                <div className="space-y-4">
-                  {/* Ato 1 */}
-                  <div 
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, 'ato1')}
-                    className="bg-surface-container-lowest/40 p-3 border border-outline-variant rounded-2xl space-y-2 min-h-[120px] transition-all"
-                  >
-                    <div className="flex justify-between items-center border-b border-outline-variant pb-1">
-                      <span className="text-sm font-bold text-white uppercase font-serif">Ato I: Partida</span>
-                      <button onClick={() => addPlanningCard('ato1')} className="text-indigo-400 hover:text-white cursor-pointer">
-                        <PlusCircle size={14} />
-                      </button>
-                    </div>
-                    <div className="space-y-1.5 max-h-[22vh] overflow-y-auto pr-1">
-                      {planningCards.filter(c => c.column === 'ato1').map(card => (
-                        <div 
-                          key={card.id} 
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, card.id)}
-                          className="bg-neutral-950 border border-outline-variant p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
-                        >
-                          <div className="font-serif font-semibold text-white pr-4">{card.title}</div>
-                          <p className="text-on-surface-variant text-sm leading-normal font-sans">{card.content}</p>
-                          <div className="flex justify-between items-center pt-1 border-t border-outline-variant/50 mt-1.5">
-                            <span className="text-[10px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Estrutura'}</span>
-                            <button onClick={() => deletePlanningCard(card.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
-                              <Trash2 size={11} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      {planningCards.filter(c => c.column === 'ato1').length === 0 && (
-                        <div className="text-center py-4 text-on-surface-variant text-xs font-sans italic">Arrastar cards aqui</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Ato 2 */}
-                  <div 
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, 'ato2')}
-                    className="bg-surface-container-lowest/40 p-3 border border-outline-variant rounded-2xl space-y-2 min-h-[120px] transition-all"
-                  >
-                    <div className="flex justify-between items-center border-b border-outline-variant pb-1">
-                      <span className="text-sm font-bold text-white uppercase font-serif">Ato II: Confronto</span>
-                      <button onClick={() => addPlanningCard('ato2')} className="text-indigo-400 hover:text-white cursor-pointer">
-                        <PlusCircle size={14} />
-                      </button>
-                    </div>
-                    <div className="space-y-1.5 max-h-[22vh] overflow-y-auto pr-1">
-                      {planningCards.filter(c => c.column === 'ato2').map(card => (
-                        <div 
-                          key={card.id} 
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, card.id)}
-                          className="bg-neutral-950 border border-outline-variant p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
-                        >
-                          <div className="font-serif font-semibold text-white pr-4">{card.title}</div>
-                          <p className="text-on-surface-variant text-sm leading-normal font-sans">{card.content}</p>
-                          <div className="flex justify-between items-center pt-1 border-t border-outline-variant/50 mt-1.5">
-                            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Trama'}</span>
-                            <button onClick={() => deletePlanningCard(card.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
-                              <Trash2 size={11} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      {planningCards.filter(c => c.column === 'ato2').length === 0 && (
-                        <div className="text-center py-4 text-on-surface-variant text-xs font-sans italic">Arrastar cards aqui</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Ato 3 */}
-                  <div 
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, 'ato3')}
-                    className="bg-surface-container-lowest/40 p-3 border border-outline-variant rounded-2xl space-y-2 min-h-[120px] transition-all"
-                  >
-                    <div className="flex justify-between items-center border-b border-outline-variant pb-1">
-                      <span className="text-sm font-bold text-white uppercase font-serif">Ato III: Resolução</span>
-                      <button onClick={() => addPlanningCard('ato3')} className="text-indigo-400 hover:text-white cursor-pointer">
-                        <PlusCircle size={14} />
-                      </button>
-                    </div>
-                    <div className="space-y-1.5 max-h-[22vh] overflow-y-auto pr-1">
-                      {planningCards.filter(c => c.column === 'ato3').map(card => (
-                        <div 
-                          key={card.id} 
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, card.id)}
-                          className="bg-neutral-950 border border-outline-variant p-2.5 rounded-lg text-sm relative group space-y-1 cursor-grab active:cursor-grabbing select-none hover:border-neutral-700 transition-all"
-                        >
-                          <div className="font-serif font-semibold text-white pr-4">{card.title}</div>
-                          <p className="text-on-surface-variant text-sm leading-normal font-sans">{card.content}</p>
-                          <div className="flex justify-between items-center pt-1 border-t border-outline-variant/50 mt-1.5">
-                            <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded font-mono uppercase font-bold">{card.tag || 'Clímax'}</span>
-                            <button onClick={() => deletePlanningCard(card.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 ml-auto transition-opacity cursor-pointer">
-                              <Trash2 size={11} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      {planningCards.filter(c => c.column === 'ato3').length === 0 && (
-                        <div className="text-center py-4 text-on-surface-variant text-xs font-sans italic">Arrastar cards aqui</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Render left Tab: Characters */}
-            {leftTab === 'characters' && (
-              <div className="p-4 flex-1 flex flex-col overflow-y-auto space-y-4">
-                <div className="flex justify-between items-center select-none">
-                  <span className="text-sm font-bold tracking-widest text-indigo-400 uppercase flex items-center gap-1.5 font-sans">
-                    <User size={14} /> Personagens
-                  </span>
-                  <button 
-                    onClick={() => {
-                      setEditingCard(null);
-                      setCardFormTitle('');
-                      setCardFormType('character');
-                      setCardFormContent('');
-                      setCardFormEmoji('👤');
-                      setIsNewCard(true);
-                      setShowCardModal(true);
-                    }} 
-                    className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer"
-                  >
-                    <Plus size={12} /> Personagem
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  {planningBlocks.filter(b => b.type === 'character').map(block => (
-                    <div 
-                      key={block.id}
-                      className="bg-surface-container-lowest/40 border border-outline-variant p-4 rounded-2xl hover:border-indigo-500/50 transition-all cursor-pointer group relative flex flex-col justify-between space-y-2"
-                      onClick={() => handleOpenEditCard(block)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{block.emoji || '👤'}</span>
-                          <div className="text-left">
-                            <h4 className="font-serif font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{block.title}</h4>
-                            <p className="text-sm text-on-surface-variant font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const confirm = await customConfirm('Excluir ficha', 'Excluir esta ficha?');
-                             if (confirm) {
-                              setPlanningBlocks(prev => prev.filter(b => b.id !== block.id));
-                            }
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-red-400 transition-all p-1 cursor-pointer"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {planningBlocks.filter(b => b.type === 'character').length === 0 && (
-                    <div className="text-center py-8 text-on-surface-variant font-sans text-xs">
-                      Nenhum personagem criado. Clique em "+ Personagem" para começar.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Render left Tab: Locations */}
-            {leftTab === 'locations' && (
-              <div className="p-4 flex-1 flex flex-col overflow-y-auto space-y-4">
-                <div className="flex justify-between items-center select-none">
-                  <span className="text-sm font-bold tracking-widest text-indigo-400 uppercase flex items-center gap-1.5 font-sans">
-                    <MapPin size={14} /> Locais
-                  </span>
-                  <button 
-                    onClick={() => {
-                      setEditingCard(null);
-                      setCardFormTitle('');
-                      setCardFormType('location');
-                      setCardFormContent('');
-                      setCardFormEmoji('📍');
-                      setIsNewCard(true);
-                      setShowCardModal(true);
-                    }} 
-                    className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer"
-                  >
-                    <Plus size={12} /> Local
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  {planningBlocks.filter(b => b.type === 'location').map(block => (
-                    <div 
-                      key={block.id}
-                      className="bg-surface-container-lowest/40 border border-outline-variant p-4 rounded-2xl hover:border-indigo-500/50 transition-all cursor-pointer group relative flex flex-col justify-between space-y-2"
-                      onClick={() => handleOpenEditCard(block)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{block.emoji || '📍'}</span>
-                          <div className="text-left">
-                            <h4 className="font-serif font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{block.title}</h4>
-                            <p className="text-sm text-on-surface-variant font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const confirm = await customConfirm('Excluir ficha', 'Excluir esta ficha?');
-                             if (confirm) {
-                              setPlanningBlocks(prev => prev.filter(b => b.id !== block.id));
-                            }
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-red-400 transition-all p-1 cursor-pointer"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {planningBlocks.filter(b => b.type === 'location').length === 0 && (
-                    <div className="text-center py-8 text-on-surface-variant font-sans text-xs">
-                      Nenhum local criado. Clique em "+ Local" para começar.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Render left Tab: Events */}
-            {leftTab === 'events' && (
-              <div className="p-4 flex-1 flex flex-col overflow-y-auto space-y-4">
-                <div className="flex justify-between items-center select-none">
-                  <span className="text-sm font-bold tracking-widest text-indigo-400 uppercase flex items-center gap-1.5 font-sans">
-                    <Calendar size={14} /> Eventos
-                  </span>
-                  <button 
-                    onClick={() => {
-                      setEditingCard(null);
-                      setCardFormTitle('');
-                      setCardFormType('event');
-                      setCardFormContent('');
-                      setCardFormEmoji('📅');
-                      setIsNewCard(true);
-                      setShowCardModal(true);
-                    }} 
-                    className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer"
-                  >
-                    <Plus size={12} /> Evento
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  {planningBlocks.filter(b => b.type === 'event').map(block => (
-                    <div 
-                      key={block.id}
-                      className="bg-surface-container-lowest/40 border border-outline-variant p-4 rounded-2xl hover:border-indigo-500/50 transition-all cursor-pointer group relative flex flex-col justify-between space-y-2"
-                      onClick={() => handleOpenEditCard(block)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{block.emoji || '📅'}</span>
-                          <div className="text-left">
-                            <h4 className="font-serif font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{block.title}</h4>
-                            <p className="text-sm text-on-surface-variant font-sans leading-relaxed mt-1">{block.content || 'Sem descrição'}</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const confirm = await customConfirm('Excluir ficha', 'Excluir esta ficha?');
-                             if (confirm) {
-                              setPlanningBlocks(prev => prev.filter(b => b.id !== block.id));
-                            }
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-red-400 transition-all p-1 cursor-pointer"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {planningBlocks.filter(b => b.type === 'event').length === 0 && (
-                    <div className="text-center py-8 text-on-surface-variant font-sans text-xs">
-                      Nenhum evento criado. Clique em "+ Evento" para começar.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Render left Tab: Statistics */}
-            {leftTab === 'statistics' && (
-              <div className="p-5 flex-1 flex flex-col overflow-y-auto justify-between select-none">
-                <div className="space-y-6">
-                  <span className="text-sm font-bold tracking-widest text-indigo-400 uppercase flex items-center gap-2">
-                    <BarChart2 size={14} /> Estatísticas do Livro
-                  </span>
-
-                  {/* Statistics Grid */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-surface-container-lowest/60 border border-outline-variant p-3 rounded-2xl">
-                      <div className="text-[11px] text-on-surface-variant uppercase tracking-wider font-mono">Capítulo</div>
-                      <div className="text-xl font-bold font-serif text-white mt-1">{activeWords} pal.</div>
-                    </div>
-                    <div className="bg-surface-container-lowest/60 border border-outline-variant p-3 rounded-2xl">
-                      <div className="text-[11px] text-on-surface-variant uppercase tracking-wider font-mono">Livro</div>
-                      <div className="text-xl font-bold font-serif text-white mt-1">{totalWords} pal.</div>
-                    </div>
-                    <div className="bg-surface-container-lowest/60 border border-outline-variant p-3 rounded-2xl">
-                      <div className="text-[11px] text-on-surface-variant uppercase tracking-wider font-mono">Caracteres</div>
-                      <div className="text-xl font-bold font-serif text-white mt-1">{totalChars}</div>
-                    </div>
-                    <div className="bg-surface-container-lowest/60 border border-outline-variant p-3 rounded-2xl">
-                      <div className="text-[11px] text-on-surface-variant uppercase tracking-wider font-mono">Estrutura</div>
-                      <div className="text-xl font-bold font-serif text-white mt-1">{chapters.length} Caps</div>
-                    </div>
-                  </div>
-
-                  {/* Typography Panel */}
-                  <div className="space-y-3 border-t border-outline-variant pt-4">
-                    <div className="text-[11px] text-on-surface-variant uppercase tracking-wider font-mono">Configuração de Texto</div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] text-on-surface-variant">Fonte</span>
-                        <select
-                          value={settings.preferredFont}
-                          onChange={(e) => setSettings((prev: WritingSettings) => ({ ...prev, preferredFont: e.target.value as WritingSettings['preferredFont'] }))}
-                          className="text-xs border border-outline-variant bg-surface-container-lowest text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
-                        >
-                          <option value="serif">Garamond</option>
-                          <option value="sans">Inter (Sans)</option>
-                          <option value="mono">JetBrains</option>
-                        </select>
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] text-on-surface-variant">Tamanho</span>
-                        <select
-                          value={settings.fontSize}
-                          onChange={(e) => setSettings((prev: WritingSettings) => ({ ...prev, fontSize: e.target.value as WritingSettings['fontSize'] }))}
-                          className="text-xs border border-outline-variant bg-surface-container-lowest text-neutral-300 p-2.5 rounded-xl focus:outline-none w-full"
-                        >
-                          <option value="sm">Pequeno</option>
-                          <option value="md">Médio</option>
-                          <option value="lg">Grande</option>
-                          <option value="xl">Extra G.</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Daily Target Widget */}
-                  <div className="bg-surface dark:bg-[#0f0f12] border border-outline-variant p-4 rounded-2xl space-y-3">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-on-surface-variant flex items-center gap-1.5">
-                        <Clock size={13} className="text-indigo-400" /> Meta do Capítulo
-                      </span>
-                      <span className="font-mono text-indigo-400 font-bold">{dailyProgress}%</span>
-                    </div>
-                    
-                    <div className="w-full bg-neutral-950 h-2 rounded-full overflow-hidden border border-outline-variant">
-                      <div 
-                        className="bg-indigo-500 h-full transition-all duration-500 ease-out shadow-[0_0_8px_rgba(99,102,241,0.3)]"
-                        style={{ width: `${dailyProgress}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-on-surface-variant">{activeWords} / {settings.dailyGoal} pal.</span>
-                      <button
-                        onClick={async () => {
-                          const goal = await customPrompt('Ajustar meta diária de palavras do capítulo:', '', settings.dailyGoal.toString());
-                          if (goal) {
-                            const num = parseInt(goal, 10);
-                            if (!isNaN(num) && num > 0) {
-                      setSettings((prev: WritingSettings) => ({ ...prev, dailyGoal: num }));
-                            }
-                          }
-                        }}
-                        className="text-indigo-400 hover:text-indigo-300 font-bold"
-                      >
-                        Ajustar Meta
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </aside>
+        <LeftSidebar
+          leftTab={leftTab}
+          setIsLeftPanelOpen={setIsLeftPanelOpen}
+          chapters={chapters}
+          setChapters={setChapters}
+          activeChapterId={activeChapterId}
+          setActiveChapterId={setActiveChapterId}
+          saveStatus={saveStatus}
+          triggerAddFrontPage={triggerAddFrontPage}
+          triggerAddBodyPage={triggerAddBodyPage}
+          triggerAddChapterToPart={triggerAddChapterToPart}
+          triggerDeletePart={triggerDeletePart}
+          triggerAddBackPage={triggerAddBackPage}
+          deleteChapter={deleteChapter}
+          moveChapterInSection={moveChapterInSection}
+          planningBlocks={planningBlocks}
+          setPlanningBlocks={setPlanningBlocks}
+          setEditingCard={setEditingCard}
+          setCardFormTitle={setCardFormTitle}
+          setCardFormType={setCardFormType}
+          setCardFormContent={setCardFormContent}
+          setCardFormEmoji={setCardFormEmoji}
+          setIsNewCard={setIsNewCard}
+          setShowCardModal={setShowCardModal}
+          handleOpenEditCard={handleOpenEditCard}
+          activeWords={activeWords}
+          totalWords={totalWords}
+          totalChars={totalChars}
+          settings={settings}
+          setSettings={setSettings}
+          dailyProgress={dailyProgress}
+          sessionMood={sessionMood}
+          setSessionMood={setSessionMood}
+          wordFrequency={wordFrequency}
+          readingTime={readingTime}
+        />
       )}
 
       {/* CENTER WRITING AREA & CANVAS */}
@@ -3221,271 +2569,16 @@ export default function WorkspaceEditor() {
         </div>
       )}
       {/* MODAL 7: LIXEIRA GERAL MODAL */}
-      {trashOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-950/80 backdrop-blur-sm px-4">
-          <div className="bg-surface dark:bg-[#0c0c0e] border border-neutral-200 dark:border-outline-variant rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative animate-fade-in font-sans">
-            
-            {/* Header */}
-            <div className="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center select-none">
-              <h3 className="font-sans font-bold text-base uppercase tracking-wider flex items-center gap-2">
-                <Trash2 size={16} /> Lixeira do Livro
-              </h3>
-              <button 
-                onClick={() => setTrashOpen(false)}
-                className="text-white/80 hover:text-white transition-colors cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* List */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
-              {/* Deleted Chapters / Pages */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-neutral-450 dark:text-on-surface-variant uppercase tracking-widest">Capítulos Excluídos</h4>
-                {deletedChapters.length === 0 ? (
-                  <div className="text-center py-6 border border-dashed border-neutral-300 dark:border-outline-variant text-neutral-450 dark:text-neutral-550 text-xs rounded-xl font-sans italic">
-                    Nenhum capítulo na lixeira.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {deletedChapters.map(chap => (
-                      <div key={chap.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant p-3.5 rounded-xl flex justify-between items-center text-sm shadow-sm transition-all hover:border-neutral-300 dark:hover:border-neutral-750">
-                        <div className="overflow-hidden mr-2">
-                          <h5 className="font-serif font-bold text-neutral-900 dark:text-white truncate">{chap.title}</h5>
-                          <p className="text-[10px] text-on-surface-variant dark:text-on-surface-variant font-mono mt-0.5">Ordem de escrita: {chap.order}</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button 
-                            onClick={() => {
-                              setChapters((prev: Chapter[]) => [...prev, chap].sort((a, b) => a.order - b.order));
-                              setDeletedChapters(prev => prev.filter(c => c.id !== chap.id));
-                            }}
-                            className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-sans"
-                          >
-                            Restaurar
-                          </button>
-                          <button 
-                            onClick={async () => {
-                              const confirm = await customConfirm("Excluir Capítulo", `Deseja realmente apagar o capítulo "${chap.title}" permanentemente? Esta ação não pode ser desfeita.`);
-                              if (confirm) {
-                                setDeletedChapters(prev => prev.filter(c => c.id !== chap.id));
-                              }
-                            }}
-                            className="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-sans"
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Deleted Planning Cards */}
-              <div className="space-y-3 pt-4 border-t border-neutral-200 dark:border-outline-variant">
-                <h4 className="text-xs font-bold text-neutral-450 dark:text-on-surface-variant uppercase tracking-widest font-sans">Cards de Planejamento</h4>
-                {deletedPlanningCards.length === 0 ? (
-                  <div className="text-center py-6 border border-dashed border-neutral-300 dark:border-outline-variant text-neutral-450 dark:text-neutral-550 text-xs rounded-xl font-sans italic">
-                    Nenhum card na lixeira.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {deletedPlanningCards.map(card => (
-                      <div key={card.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant p-3.5 rounded-xl flex justify-between items-center text-sm shadow-sm transition-all hover:border-neutral-300 dark:hover:border-neutral-750">
-                        <div className="overflow-hidden mr-2 flex-1">
-                          <h5 className="font-serif font-bold text-neutral-900 dark:text-white truncate">{card.title}</h5>
-                          <p className="text-xs text-on-surface-variant dark:text-on-surface-variant truncate mt-0.5 max-w-[240px]">{card.content}</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button 
-                            onClick={() => {
-                              setPlanningCards(prev => [...prev, card]);
-                              setDeletedPlanningCards(prev => prev.filter(c => c.id !== card.id));
-                            }}
-                            className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-sans"
-                          >
-                            Restaurar
-                          </button>
-                          <button 
-                            onClick={async () => {
-                              const confirm = await customConfirm("Excluir Card", `Deseja realmente apagar o card "${card.title}" permanentemente? Esta ação não pode ser desfeita.`);
-                              if (confirm) {
-                                setDeletedPlanningCards(prev => prev.filter(c => c.id !== card.id));
-                              }
-                            }}
-                            className="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-sans"
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <TrashModal trashOpen={trashOpen} setTrashOpen={setTrashOpen} customConfirm={customConfirm} />
 
       {/* MODAL 8: GLOBAL SEARCH OVERLAY */}
-      {globalSearchOpen && (
-        <div
-          className="fixed inset-0 z-[60] flex items-start justify-center pt-24 px-4"
-          onClick={() => { setGlobalSearchOpen(false); setGlobalSearchQuery(''); }}
-        >
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-neutral-950/70 backdrop-blur-sm" />
-
-          {/* Panel */}
-          <div
-            className="relative w-full max-w-xl bg-surface dark:bg-[#0c0c0e] border border-neutral-200 dark:border-outline-variant rounded-2xl shadow-2xl overflow-hidden animate-fade-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Search input */}
-            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-neutral-200 dark:border-outline-variant">
-              <Search size={18} className="text-on-surface-variant shrink-0" />
-              <input
-                type="text"
-                autoFocus
-                value={globalSearchQuery}
-                onChange={(e) => setGlobalSearchQuery(e.target.value)}
-                placeholder="Buscar capítulos, notas, quadros e mais..."
-                className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none"
-              />
-              {globalSearchQuery && (
-                <button
-                  onClick={() => setGlobalSearchQuery('')}
-                  className="text-on-surface-variant hover:text-neutral-600 dark:hover:text-white transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-
-            {/* Results */}
-            <div className="max-h-80 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
-              {globalSearchQuery.trim() === '' ? (
-                <div className="px-4 py-8 text-center text-sm text-on-surface-variant">
-                  Digite para buscar em todo o seu projeto
-                </div>
-              ) : (() => {
-                const q = globalSearchQuery.toLowerCase();
-
-                const chapterResults = chapters.filter(ch =>
-                  ch.title.toLowerCase().includes(q) ||
-                  ch.content.toLowerCase().includes(q)
-                );
-
-                const noteResults = planningCards.filter(c =>
-                  pinnedCardsList.includes(c.id) &&
-                  (c.title.toLowerCase().includes(q) || c.content.toLowerCase().includes(q))
-                );
-
-                const boardResults = planningBoards.filter(b =>
-                  b.name.toLowerCase().includes(q) || b.description.toLowerCase().includes(q)
-                );
-
-                const total = chapterResults.length + noteResults.length + boardResults.length;
-
-                if (total === 0) {
-                  return (
-                    <div className="px-4 py-8 text-center text-sm text-on-surface-variant italic">
-                      Nenhum resultado para &quot;{globalSearchQuery}&quot;
-                    </div>
-                  );
-                }
-
-                return (
-                  <>
-                    {chapterResults.length > 0 && (
-                      <div>
-                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-neutral-50 dark:bg-surface-container-lowest/50">
-                          Capítulos
-                        </div>
-                        {chapterResults.map(ch => {
-                          const idx = ch.content.toLowerCase().indexOf(q);
-                          const snippet = idx >= 0
-                            ? '...' + ch.content.slice(Math.max(0, idx - 30), idx + 60).replace(/\n/g, ' ') + '...'
-                            : '';
-                          return (
-                            <button
-                              key={ch.id}
-                              onClick={() => {
-                                setActiveChapterId(ch.id);
-                                setGlobalSearchOpen(false);
-                                setGlobalSearchQuery('');
-                              }}
-                              className="w-full text-left px-4 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors"
-                            >
-                              <div className="text-sm font-semibold text-neutral-900 dark:text-white">{ch.title}</div>
-                              {snippet && <div className="text-xs text-on-surface-variant mt-0.5 truncate">{snippet}</div>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {noteResults.length > 0 && (
-                      <div>
-                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-neutral-50 dark:bg-surface-container-lowest/50">
-                          Notas Fixadas
-                        </div>
-                        {noteResults.map(c => (
-                          <button
-                            key={c.id}
-                            onClick={() => {
-                              setActiveRightTool('notes');
-                              setGlobalSearchOpen(false);
-                              setGlobalSearchQuery('');
-                            }}
-                            className="w-full text-left px-4 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors"
-                          >
-                            <div className="text-sm font-semibold text-neutral-900 dark:text-white">{c.title}</div>
-                            <div className="text-xs text-on-surface-variant mt-0.5 truncate">{c.content}</div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {boardResults.length > 0 && (
-                      <div>
-                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-neutral-50 dark:bg-surface-container-lowest/50">
-                          Quadros
-                        </div>
-                        {boardResults.map(b => (
-                          <button
-                            key={b.id}
-                            onClick={() => {
-                              setLeftTab('planning');
-                              setIsLeftPanelOpen(true);
-                              setActiveBoardId(b.id);
-                              setGlobalSearchOpen(false);
-                              setGlobalSearchQuery('');
-                            }}
-                            className="w-full text-left px-4 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors"
-                          >
-                            <div className="text-sm font-semibold text-neutral-900 dark:text-white">{b.emoji} {b.name}</div>
-                            <div className="text-xs text-on-surface-variant mt-0.5 truncate">{b.description}</div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-
-            {/* Footer hint */}
-            <div className="px-4 py-2.5 border-t border-neutral-200 dark:border-outline-variant flex gap-4 text-xs text-on-surface-variant">
-              <span><kbd className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-[10px]">Enter</kbd> para abrir</span>
-              <span><kbd className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-[10px]">Esc</kbd> para fechar</span>
-            </div>
-          </div>
-        </div>
-      )}
+      <GlobalSearchModal
+        globalSearchOpen={globalSearchOpen} setGlobalSearchOpen={setGlobalSearchOpen}
+        globalSearchQuery={globalSearchQuery} setGlobalSearchQuery={setGlobalSearchQuery}
+        setActiveChapterId={setActiveChapterId} setLeftTab={setLeftTab}
+        setIsLeftPanelOpen={setIsLeftPanelOpen} setActiveBoardId={setActiveBoardId}
+        setActiveRightTool={setActiveRightTool}
+      />
 
       {/* MODAL 9: CUSTOM STYLED DIALOG (PROMPT / CONFIRM) */}
       <PromptConfirmDialog

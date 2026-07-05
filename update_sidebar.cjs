@@ -1,4 +1,6 @@
-import React from 'react';
+const fs = require('fs');
+
+const code = `import React from 'react';
 import { useEditorStore } from '@/stores/editorStore';
 import { Chapter, WritingSettings, PlanningBlock } from '@/components/gospelreads/types';
 import {
@@ -97,10 +99,10 @@ export function LeftSidebar({
                     <FolderOpen size={13} /> Estrutura ({chapters.length} Caps)
                   </span>
                   <span className="flex items-center gap-1 text-[10px] text-on-surface-variant font-mono">
-                    <span className={`w-1 h-1 rounded-full ${
+                    <span className={\`w-1 h-1 rounded-full \${
                       saveStatus === 'saved' ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]' :
                       saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' : 'bg-gray-500'
-                    }`} />
+                    }\`} />
                     {saveStatus === 'saved' ? 'Sincronizado' :
                      saveStatus === 'saving' ? 'Salvando...' : 'Não salvo'}
                   </span>
@@ -144,7 +146,7 @@ export function LeftSidebar({
                                 return (
                                   <div key={part.id} className="bg-surface-container-lowest/30 border border-outline-variant rounded-xl p-2.5 space-y-2">
                                     <div className="flex justify-between items-center select-none border-b border-outline-variant pb-1.5">
-                                      <span onClick={() => setActiveChapterId(part.id)} className={`text-sm font-bold text-on-surface flex items-center gap-1.5 cursor-pointer hover:text-indigo-400 transition-colors ${part.id === activeChapterId ? 'text-indigo-400 font-semibold' : ''}`}>
+                                      <span onClick={() => setActiveChapterId(part.id)} className={\`text-sm font-bold text-on-surface flex items-center gap-1.5 cursor-pointer hover:text-indigo-400 transition-colors \${part.id === activeChapterId ? 'text-indigo-400 font-semibold' : ''}\`}>
                                         📁 {part.title}
                                       </span>
                                       <div className="flex items-center gap-2">
@@ -205,3 +207,6 @@ export function LeftSidebar({
     </aside>
   );
 }
+`;
+
+fs.writeFileSync('src/components/gospelreads/workspace/sidebar/LeftSidebar.tsx', code);
