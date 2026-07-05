@@ -2,6 +2,7 @@ import React from 'react';
 import { DndContext, DragEndEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableCard } from './SortableCard';
+import { DroppableSection } from './DroppableSection';
 import { useEditorStore } from '@/stores/editorStore';
 import { Plus, X, Trash2, Pin } from 'lucide-react';
 
@@ -98,7 +99,7 @@ export function KanbanBoard({
                 </button>
               </div>
 
-              <div className="flex flex-wrap gap-4 min-h-[150px]">
+              <DroppableSection id={section.id} className="flex flex-wrap gap-4 min-h-[150px] p-2 -m-2">
                 {planningCards.filter(c => c.column === section.id).map(card => {
                   const isPinned = pinnedCardsList.includes(card.id);
                   return (
@@ -115,7 +116,7 @@ export function KanbanBoard({
                 {planningCards.filter(c => c.column === section.id).length === 0 && (
                   <div className="text-on-surface-variant dark:text-neutral-600 text-xs italic font-sans py-2 select-none">Sem cards nesta seção. Clique em "Add +" para criar.</div>
                 )}
-              </div>
+              </DroppableSection>
             </div>
           ))}
         </div>
