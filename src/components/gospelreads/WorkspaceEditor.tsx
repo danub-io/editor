@@ -218,15 +218,6 @@ interface PlanningBlock {
   emoji?: string;
 }
 
-interface VersionSnapshot {
-  id: string;
-  chapterId: string;
-  content: string;
-  timestamp: string;
-  title: string;
-  charCount: number;
-  isAuto: boolean;
-}
 
 export default function WorkspaceEditor() {
   const {

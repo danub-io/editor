@@ -8,10 +8,6 @@ import {
   Trash2,
   ChevronUp,
   ChevronDown,
-  User,
-  MapPin,
-  Calendar,
-  BarChart2,
   Clock
 } from 'lucide-react';
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
@@ -75,10 +71,6 @@ export function LeftSidebar({
           <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant font-sans select-none">
             {leftTab === 'manuscript' && 'Manuscrito'}
             {leftTab === 'planning' && 'Quadro de Plotagem'}
-            {leftTab === 'characters' && 'Personagens'}
-            {leftTab === 'locations' && 'Locais'}
-            {leftTab === 'events' && 'Eventos da Trama'}
-            {leftTab === 'statistics' && 'Estatísticas'}
           </span>
           <button
             onClick={() => setIsLeftPanelOpen(false)}
@@ -193,14 +185,6 @@ export function LeftSidebar({
           </div>
         )}
 
-        {/* ... (other tabs omitted for brevity but they are basically static data rendering) */}
-        {leftTab === 'characters' && (
-          <div className="p-4 flex-1 flex flex-col overflow-y-auto space-y-4">
-             <div className="flex justify-between items-center select-none">
-              <span className="text-sm font-bold tracking-widest text-indigo-400 uppercase flex items-center gap-1.5 font-sans"><User size={14} /> Personagens</span>
-            </div>
-          </div>
-        )}
       </div>
     </aside>
   );
