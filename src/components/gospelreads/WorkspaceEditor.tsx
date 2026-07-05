@@ -213,9 +213,12 @@ interface PlanningBlock {
 
 interface VersionSnapshot {
   id: string;
+  chapterId: string;
+  content: string;
   timestamp: string;
   title: string;
   charCount: number;
+  isAuto: boolean;
 }
 
 export default function WorkspaceEditor() {
@@ -353,7 +356,9 @@ export default function WorkspaceEditor() {
 
   // Refs
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSnapshotTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const lastAutoSnapshotContent = useRef<string>('');
 
   // Active Chapter
   const activeChapter = chapters.find(c => c.id === activeChapterId) || chapters[0];
@@ -462,6 +467,27 @@ export default function WorkspaceEditor() {
       saveTimeoutRef.current = setTimeout(() => {
         setSaveStatus('saved');
       }, 1200);
+
+      // Auto Snapshot Logic (similar to Google Docs autosave versions)
+      // Use setInterval approach, do not clear timeout on every keystroke, only set it if not running
+      if (!autoSnapshotTimeoutRef.current) {
+        autoSnapshotTimeoutRef.current = setTimeout(() => {
+          if (html !== lastAutoSnapshotContent.current) {
+            const newSnap: VersionSnapshot = {
+              id: `snap-${Date.now()}`,
+              chapterId: activeChapterId,
+              content: html,
+              timestamp: new Date().toLocaleString('pt-BR'),
+              title: 'Salvamento Automático',
+              charCount: html.length,
+              isAuto: true
+            };
+            setSnapshots((prev: VersionSnapshot[]) => [newSnap, ...prev]);
+            lastAutoSnapshotContent.current = html;
+          }
+          autoSnapshotTimeoutRef.current = null;
+        }, 60000); // 60 seconds interval from the first keystroke since last save
+      }
     },
     editorProps: {
       attributes: {
@@ -473,6 +499,7 @@ export default function WorkspaceEditor() {
   useEffect(() => {
     if (editor && activeChapter && editor.getHTML() !== activeChapter.content) {
       editor.commands.setContent(activeChapter.content || "");
+      lastAutoSnapshotContent.current = activeChapter.content || "";
     }
   }, [activeChapterId, editor]);
 
@@ -653,9 +680,12 @@ export default function WorkspaceEditor() {
     if (!title) return;
     const newSnap: VersionSnapshot = {
       id: `snap-${Date.now()}`,
+      chapterId: activeChapter.id,
+      content: activeChapter.content,
       timestamp: new Date().toLocaleString('pt-BR'),
       title,
-      charCount: activeChapter.content.length
+      charCount: activeChapter.content.length,
+      isAuto: false
     };
     setSnapshots([newSnap, ...snapshots]);
   };
@@ -2261,21 +2291,57 @@ export default function WorkspaceEditor() {
                   <div className="space-y-4 flex-1 overflow-y-auto text-neutral-300">
                     <button
                       onClick={createSnapshot}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-widest py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-widest py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
                     >
-                      <Plus size={14} /> Criar Novo Snapshot
+                      <Plus size={14} /> Salvar Versão Atual
                     </button>
 
                     <div className="space-y-2.5">
-                      {snapshots.map(snap => (
-                        <div key={snap.id} className="bg-neutral-950 border border-outline-variant p-3 rounded-xl flex justify-between items-center">
-                          <div className="space-y-0.5">
-                            <h4 className="text-sm font-serif font-semibold text-white">{snap.title}</h4>
-                            <p className="text-xs text-on-surface-variant font-mono">{snap.timestamp}</p>
-                          </div>
-                          <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">{snap.charCount} caracteres</span>
-                        </div>
-                      ))}
+                      {snapshots.filter(s => s.chapterId === activeChapterId).length === 0 ? (
+                        <p className="text-xs text-on-surface-variant text-center py-4 italic font-sans">
+                          Nenhuma versão salva para este capítulo. As versões automáticas aparecerão aqui.
+                        </p>
+                      ) : (
+                        snapshots
+                          .filter(s => s.chapterId === activeChapterId)
+                          .map(snap => (
+                            <div key={snap.id} className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-outline-variant p-3.5 rounded-xl space-y-3 shadow-sm group">
+                              <div className="flex justify-between items-start">
+                                <div className="space-y-0.5 overflow-hidden">
+                                  <h4 className="text-sm font-serif font-bold text-neutral-900 dark:text-white flex items-center gap-1.5 truncate">
+                                    {snap.title}
+                                    {snap.isAuto && (
+                                      <span className="text-[9px] bg-neutral-200 dark:bg-surface-container-lowest text-neutral-600 dark:text-neutral-400 px-1.5 py-0.5 rounded uppercase tracking-widest font-mono shrink-0">Auto</span>
+                                    )}
+                                  </h4>
+                                  <p className="text-[10px] text-neutral-500 dark:text-on-surface-variant font-mono">{snap.timestamp}</p>
+                                </div>
+                                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-md font-mono shrink-0 whitespace-nowrap">
+                                  {snap.charCount} car.
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center pt-2 border-t border-neutral-100 dark:border-outline-variant/50">
+                                <span className="text-[9px] text-neutral-400 dark:text-neutral-500 uppercase tracking-widest font-bold">Ações:</span>
+                                <button
+                                  onClick={async () => {
+                                    const confirm = await customConfirm('Restaurar Versão', `Deseja realmente substituir o conteúdo atual por esta versão ("${snap.title}")? O texto atual não salvo será perdido.`);
+                                    if (confirm && activeChapter) {
+                                      setChapters((prev: Chapter[]) => prev.map(ch => ch.id === activeChapterId ? { ...ch, content: snap.content } : ch));
+                                      if (editor) {
+                                        editor.commands.setContent(snap.content);
+                                        lastAutoSnapshotContent.current = snap.content;
+                                      }
+                                      toast('Versão restaurada com sucesso!');
+                                    }
+                                  }}
+                                  className="text-xs bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                                >
+                                  Restaurar
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                      )}
                     </div>
                   </div>
                 )}

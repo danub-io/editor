@@ -1,0 +1,15 @@
+<<<<<<< SEARCH
+  // Refs
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Active Chapter
+=======
+  // Refs
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSnapshotTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const lastAutoSnapshotContent = useRef<string>('');
+
+  // Active Chapter
+>>>>>>> REPLACE

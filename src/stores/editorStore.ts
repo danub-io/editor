@@ -72,10 +72,7 @@ const defaultPlanningBlocks: PlanningBlock[] = [
   { id: 'pbl-3', boardId: 'pb-3', title: 'O Grande Alinhamento', type: 'event', content: 'Evento astronômico que conecta todas as dimensões literárias.', emoji: '🪐' }
 ];
 
-const defaultSnapshots: VersionSnapshot[] = [
-  { id: 'snap-1', timestamp: '29/06/2026, 14:32', title: 'Rascunho Inicial do Cap 1', charCount: 820 },
-  { id: 'snap-2', timestamp: '29/06/2026, 18:15', title: 'Revisão Ortográfica Geral', charCount: 1150 }
-];
+const defaultSnapshots: VersionSnapshot[] = [];
 
 export const useEditorStore = create<EditorState>()(
   persist(
