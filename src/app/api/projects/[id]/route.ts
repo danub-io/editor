@@ -12,7 +12,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await (params as any);
+  const { id } = await params;
   try {
     const user = await verifyCloudflareToken(req);
     // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
@@ -52,8 +52,8 @@ export async function GET(
         theme: row.settingsTheme,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
 
@@ -62,7 +62,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await (params as any);
+  const { id } = await params;
   try {
     const user = await verifyCloudflareToken(req);
     // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
@@ -92,7 +92,7 @@ export async function PUT(
 
     const body = parsedBody.data;
     const now = new Date().toISOString();
-    const updates: Record<string, any> = { updatedAt: now };
+    const updates: Record<string, string | number | null> = { updatedAt: now };
 
     if (body.title !== undefined) updates.title = body.title;
     if (body.author !== undefined) updates.author = body.author;
@@ -120,8 +120,8 @@ export async function PUT(
 
     await db.update(projects).set(updates).where(eq(projects.id, id));
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
 
@@ -130,7 +130,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await (params as any);
+  const { id } = await params;
   try {
     const user = await verifyCloudflareToken(req);
     // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
@@ -152,7 +152,7 @@ export async function DELETE(
     const db = getDb(process.env as Record<string, unknown>);
     await db.delete(projects).where(eq(projects.id, id));
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
