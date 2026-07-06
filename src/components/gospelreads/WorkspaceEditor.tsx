@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { useEditorStore } from '@/stores/editorStore';
 
@@ -246,6 +246,13 @@ export default function WorkspaceEditor() {
     footnotes, setFootnotes,
     deletedChapters, setDeletedChapters
   } = useEditorStore();
+  const sectionIdToName = useMemo(() => {
+    return planningSections.reduce((acc, section) => {
+      acc[section.id] = section.name;
+      return acc;
+    }, {} as Record<string, string>);
+  }, [planningSections]);
+
   // Navigation & UI layouts
   const [leftTab, setLeftTab] = useState<'manuscript' | 'planning' | 'characters' | 'locations' | 'events' | 'statistics'>('manuscript');
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
@@ -1607,7 +1614,7 @@ export default function WorkspaceEditor() {
                           />
                           
                           <div className="flex justify-between items-center text-[10px] text-on-surface-variant dark:text-on-surface-variant pt-1">
-                            <span className="font-mono">Seção: {planningSections.find(s => s.id === card.column)?.name || 'Geral'}</span>
+                            <span className="font-mono">Seção: {sectionIdToName[card.column] || 'Geral'}</span>
                             <span className="opacity-0 group-hover:opacity-100 transition-opacity">⋮ Drag to reorder</span>
                           </div>
                         </div>
