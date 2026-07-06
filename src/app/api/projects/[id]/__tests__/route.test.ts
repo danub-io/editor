@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { PUT } from '../route';
-import { verifyCloudflareToken } from '@/lib/auth/cloudflare';
+import { checkAuth } from '@/lib/auth/check-auth';
 import { getDb } from '@gospelreads/db';
 
-vi.mock('@/lib/auth/cloudflare', () => ({
-  verifyCloudflareToken: vi.fn(),
+vi.mock('@/lib/auth/check-auth', () => ({
+  checkAuth: vi.fn(),
 }));
 
 vi.mock('@gospelreads/db', () => ({
@@ -26,7 +26,7 @@ describe('PUT /api/projects/[id]', () => {
     const mockError = new Error('Database connection failed');
 
     // Mock authentication
-    vi.mocked(verifyCloudflareToken).mockResolvedValue({ id: 'user-1' } as any);
+    vi.mocked(checkAuth).mockResolvedValue({ id: 'user-1' } as any);
 
     // Mock database to throw error
     vi.mocked(getDb).mockImplementation(() => {
