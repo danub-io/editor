@@ -72,4 +72,35 @@ describe('getDb', () => {
 
     expect(db1).toBe(db2);
   });
+
+  it('should fall back to file:local.db if env object is provided but missing DATABASE_URL', async () => {
+    vi.stubEnv('DATABASE_URL', '');
+
+    const { getDb } = await import('./index');
+
+    const db = getDb({ OTHER_VAR: 'some-value' });
+
+    expect(db.client.config.url).toBe('file:local.db');
+  });
+
+  it('should pass schema to drizzle', async () => {
+    const { getDb } = await import('./index');
+    const schema = await import('./schema');
+
+    const db = getDb();
+
+    expect(db.options.schema).toEqual(schema);
+  });
+});
+
+describe('schema exports', () => {
+  it('should re-export schema from index', async () => {
+    const indexExports = await import('./index');
+    const schemaExports = await import('./schema');
+
+    // Check that key schema exports are present in index
+    expect(indexExports.projects).toBe(schemaExports.projects);
+    expect(indexExports.chapters).toBe(schemaExports.chapters);
+    expect(indexExports.characters).toBe(schemaExports.characters);
+  });
 });
