@@ -1020,6 +1020,8 @@ export default function WorkspaceEditor() {
   // Local state for right active sidebar tool
   const [activeRightTool, setActiveRightTool] = useState<string | null>(null);
 
+  const pinnedCardsSet = React.useMemo(() => new Set(pinnedCardsList), [pinnedCardsList]);
+
   return (
         <div className="w-full flex bg-surface dark:bg-surface h-screen max-h-screen overflow-hidden relative editor-workspace flex-col lg:flex-row">
       <MobileNav
@@ -1150,7 +1152,7 @@ export default function WorkspaceEditor() {
                   {/* Cards horizontal shelf */}
                   <div className="flex flex-wrap gap-4">
                     {planningCards.filter(c => c.column === section.id).map(card => {
-                      const isPinned = pinnedCardsList && pinnedCardsList.includes(card.id);
+                      const isPinned = pinnedCardsList && pinnedCardsSet.has(card.id);
                       return (
                         <div 
                           key={card.id}
@@ -1534,7 +1536,7 @@ export default function WorkspaceEditor() {
                         }
                       }}
                     >
-                      {planningCards.filter(c => pinnedCardsList.includes(c.id)).map((card, idx) => (
+                      {planningCards.filter(c => pinnedCardsSet.has(c.id)).map((card, idx) => (
                         <div 
                           key={card.id} 
                           draggable
@@ -1612,7 +1614,7 @@ export default function WorkspaceEditor() {
                           </div>
                         </div>
                       ))}
-                      {planningCards.filter(c => pinnedCardsList.includes(c.id)).length === 0 && (
+                      {planningCards.filter(c => pinnedCardsSet.has(c.id)).length === 0 && (
                         <div className="text-center py-8 text-neutral-600 dark:text-neutral-600 text-xs italic font-sans">Nenhum card fixado.</div>
                       )}
                     </div>
