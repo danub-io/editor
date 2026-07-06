@@ -42,18 +42,6 @@ describe('Breadcrumbs Component', () => {
     expect(listItems.length).toBe(2);
   });
 
-  it('renders the third level breadcrumb with a known label', () => {
-    mockUsePathname.mockReturnValue('/projects/test-project-id/producao');
-
-    render(<Breadcrumbs projectTitle="My Test Project" projectId="test-project-id" />);
-
-    const listItems = screen.getAllByRole('listitem');
-    expect(listItems.length).toBe(3);
-
-    // "producao" should be mapped to "Produção" based on LABELS constant
-    expect(screen.getByText('Produção')).toBeInTheDocument();
-  });
-
   it('renders the third level breadcrumb with the raw segment if unknown', () => {
     mockUsePathname.mockReturnValue('/projects/test-project-id/unknown-segment');
 
@@ -77,5 +65,33 @@ describe('Breadcrumbs Component', () => {
 
     // "mundo" should be mapped to "Mundo"
     expect(screen.getByText('Mundo')).toBeInTheDocument();
+  });
+
+  describe('Known Labels', () => {
+    const knownLabels = [
+      { segment: 'producao', label: 'Produção' },
+      { segment: 'mundo', label: 'Mundo' },
+      { segment: 'personagens', label: 'Personagens' },
+      { segment: 'characters', label: 'Personagens' },
+      { segment: 'locais', label: 'Locais' },
+      { segment: 'locations', label: 'Locais' },
+      { segment: 'timeline', label: 'Linha do Tempo' },
+      { segment: 'settings', label: 'Configurações' },
+    ];
+
+    knownLabels.forEach(({ segment, label }) => {
+      it(`renders correctly for segment "${segment}" -> "${label}"`, () => {
+        mockUsePathname.mockReturnValue(`/projects/test-project-id/${segment}`);
+
+        // Use a unique key for each render to ensure full DOM teardown/rebuild, or we just rely on RTL's cleanups
+        const { unmount } = render(<Breadcrumbs projectTitle="My Test Project" projectId="test-project-id" />);
+
+        const listItems = screen.getAllByRole('listitem');
+        expect(listItems.length).toBe(3);
+        expect(screen.getByText(label)).toBeInTheDocument();
+
+        unmount();
+      });
+    });
   });
 });
