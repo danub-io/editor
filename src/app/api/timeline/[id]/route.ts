@@ -4,12 +4,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@gospelreads/db";
 import { timelineEvents } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
+import { checkAuth } from "@/lib/auth/check-auth";
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
     const db = getDb(process.env as Record<string, unknown>);
     const body = (await req.json()) as any as Record<string, any>;
@@ -32,6 +36,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
     const db = getDb(process.env as Record<string, unknown>);
     await db.delete(timelineEvents).where(eq(timelineEvents.id, id));

@@ -1,7 +1,7 @@
 import { jwtVerify, createRemoteJWKSet } from 'jose';
 import { NextRequest } from 'next/server';
 
-const CLOUDFLARE_TEAM_DOMAIN = process.env.CLOUDFLARE_TEAM_DOMAIN || '';
+const CLOUDFLARE_TEAM_DOMAIN = process.env.CLOUDFLARE_TEAM_DOMAIN || 'https://example.cloudflareaccess.com';
 const CLOUDFLARE_AUDIENCE = process.env.CLOUDFLARE_AUDIENCE || '';
 
 const JWKS = createRemoteJWKSet(
