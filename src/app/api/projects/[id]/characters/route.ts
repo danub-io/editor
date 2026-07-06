@@ -1,6 +1,7 @@
 export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
+import { checkAuth } from "@/lib/auth/check-auth";
 import { getDb } from "@gospelreads/db";
 import { characters } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
@@ -13,6 +14,9 @@ export async function GET(
 ) {
   const { id } = await (params as any);
   try {
+    const authResult = await checkAuth(req);
+    if (authResult.error) return authResult.error;
+
     const db = getDb(process.env as Record<string, unknown>);
     const rows = await db
       .select()
@@ -37,6 +41,9 @@ export async function POST(
 ) {
   const { id } = await (params as any);
   try {
+    const authResult = await checkAuth(req);
+    if (authResult.error) return authResult.error;
+
     const db = getDb(process.env as Record<string, unknown>);
     const body = (await req.json()) as any as Record<string, any>;
     const now = new Date().toISOString();

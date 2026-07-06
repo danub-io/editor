@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@gospelreads/db";
 import { timelineEvents } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
+import { checkAuth } from "@/lib/auth/check-auth";
 
 export async function PUT(
   req: NextRequest,
@@ -11,6 +12,9 @@ export async function PUT(
 ) {
   const { id } = await (params as any);
   try {
+    const authResult = await checkAuth(req);
+    if (authResult.error) return authResult.error;
+
     const db = getDb(process.env as Record<string, unknown>);
     const body = (await req.json()) as any as Record<string, any>;
     const now = new Date().toISOString();
@@ -33,6 +37,9 @@ export async function DELETE(
 ) {
   const { id } = await (params as any);
   try {
+    const authResult = await checkAuth(req);
+    if (authResult.error) return authResult.error;
+
     const db = getDb(process.env as Record<string, unknown>);
     await db.delete(timelineEvents).where(eq(timelineEvents.id, id));
     return NextResponse.json({ success: true });
