@@ -5,6 +5,7 @@ import { getRequestContext } from "@cloudflare/next-on-pages";
 import { getDb } from "@gospelreads/db";
 import { projects } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
+import { verifyCloudflareToken } from "@/lib/auth/cloudflare";
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -17,6 +18,23 @@ export async function POST(
   const db = getDb(process.env as Record<string, unknown>);
 
   try {
+    const user = await verifyCloudflareToken(request);
+    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
+    if (!user) {
+      const apiSecret = process.env.API_SECRET;
+      if (apiSecret) {
+        const authHeader = request.headers.get("authorization");
+        const apiKeyHeader = request.headers.get("x-api-key");
+        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
+
+        if (token !== apiSecret) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+      } else {
+         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
     const [project] = await db
       .select()
       .from(projects)
