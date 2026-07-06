@@ -1,5 +1,6 @@
 export const runtime = "edge";
 
+import { requireAuth } from "@/lib/auth/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@gospelreads/db";
 import { characters } from "@gospelreads/db";
@@ -11,6 +12,9 @@ export async function PUT(
 ) {
   const { id } = await (params as any);
   try {
+    const authError = await requireAuth(req);
+    if (authError) return authError;
+
     const db = getDb(process.env as Record<string, unknown>);
     const body = (await req.json()) as any as Record<string, any>;
     const now = new Date().toISOString();
@@ -34,6 +38,9 @@ export async function DELETE(
 ) {
   const { id } = await (params as any);
   try {
+    const authError = await requireAuth(req);
+    if (authError) return authError;
+
     const db = getDb(process.env as Record<string, unknown>);
     await db.delete(characters).where(eq(characters.id, id));
     return NextResponse.json({ success: true });

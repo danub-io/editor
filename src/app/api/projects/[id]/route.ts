@@ -1,10 +1,10 @@
 export const runtime = "edge";
 
+import { requireAuth } from "@/lib/auth/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@gospelreads/db";
 import { projects } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
-import { verifyCloudflareToken } from "@/lib/auth/cloudflare";
 import { projectSchema } from "@/lib/validations/project";
 
 // GET /api/projects/[id]
@@ -14,22 +14,9 @@ export async function GET(
 ) {
   const { id } = await (params as any);
   try {
-    const user = await verifyCloudflareToken(req);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
-    if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
+    const authError = await requireAuth(req);
+    if (authError) return authError;
 
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
 
     const db = getDb(process.env as Record<string, unknown>);
     const [row] = await db.select().from(projects).where(eq(projects.id, id));
@@ -64,22 +51,9 @@ export async function PUT(
 ) {
   const { id } = await (params as any);
   try {
-    const user = await verifyCloudflareToken(req);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
-    if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
+    const authError = await requireAuth(req);
+    if (authError) return authError;
 
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
 
     const db = getDb(process.env as Record<string, unknown>);
     const rawBody = await req.json();
@@ -132,22 +106,9 @@ export async function DELETE(
 ) {
   const { id } = await (params as any);
   try {
-    const user = await verifyCloudflareToken(req);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
-    if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
+    const authError = await requireAuth(req);
+    if (authError) return authError;
 
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
 
     const db = getDb(process.env as Record<string, unknown>);
     await db.delete(projects).where(eq(projects.id, id));
