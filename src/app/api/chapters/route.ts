@@ -9,7 +9,7 @@ import { generateId } from "@/lib/utils";
 import { z } from "zod";
 
 const createChapterSchema = chapterSchema.extend({
-  projectId: z.string()
+  projectId: z.string(),
 });
 
 export async function POST(req: NextRequest) {
@@ -20,13 +20,15 @@ export async function POST(req: NextRequest) {
       if (apiSecret) {
         const authHeader = req.headers.get("authorization");
         const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
+        const token = authHeader?.startsWith("Bearer ")
+          ? authHeader.substring(7)
+          : apiKeyHeader;
 
         if (token !== apiSecret) {
           return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
       } else {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
 
@@ -35,7 +37,10 @@ export async function POST(req: NextRequest) {
 
     const parsedBody = createChapterSchema.safeParse(rawBody);
     if (!parsedBody.success) {
-      return NextResponse.json({ error: "Validation error", details: parsedBody.error.format() }, { status: 400 });
+      return NextResponse.json(
+        { error: "Validation error", details: parsedBody.error.format() },
+        { status: 400 },
+      );
     }
 
     const body = parsedBody.data;
