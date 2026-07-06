@@ -17,6 +17,8 @@ import {
   Frown
 } from 'lucide-react';
 
+import { useMemo } from 'react';
+
 export function RightSidebar({
   activeRightTool,
   setActiveRightTool,
@@ -54,6 +56,13 @@ export function RightSidebar({
   editor
 }: any) {
   const pinnedCardsSet = React.useMemo(() => new Set(pinnedCardsList || []), [pinnedCardsList]);
+  const sectionIdToName = useMemo(() => {
+    if (!planningSections) return {};
+    return planningSections.reduce((acc: Record<string, string>, section: any) => {
+      acc[section.id] = section.name;
+      return acc;
+    }, {});
+  }, [planningSections]);
 
   if (!activeRightTool) return null;
 
@@ -387,7 +396,7 @@ export function RightSidebar({
                   />
 
                   <div className="flex justify-between items-center text-[10px] text-on-surface-variant dark:text-on-surface-variant pt-1">
-                    <span className="font-mono">Seção: {planningSections.find((s: any) => s.id === card.column)?.name || 'Geral'}</span>
+                    <span className="font-mono">Seção: {sectionIdToName[card.column] || 'Geral'}</span>
                     <span className="opacity-0 group-hover:opacity-100 transition-opacity">⋮ Drag to reorder</span>
                   </div>
                 </div>
