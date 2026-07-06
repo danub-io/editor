@@ -71,8 +71,10 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
           ? chapter.content.replace(/<[^>]+>/g, "")
           : "";
         
-        if (plainContent.toLowerCase().includes(lowerQuery)) {
-          const index = plainContent.toLowerCase().indexOf(lowerQuery);
+        const lowerPlainContent = plainContent.toLowerCase();
+        const index = lowerPlainContent.indexOf(lowerQuery);
+
+        if (index !== -1) {
           const start = Math.max(0, index - 40);
           const end = Math.min(plainContent.length, index + query.length + 40);
           let snippet = plainContent.substring(start, end);
