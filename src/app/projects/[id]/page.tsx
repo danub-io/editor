@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useProjectStore } from "@/stores/projectStore";
 import { Editor } from "@/components/editor/Editor";
 import { BookOpen, Settings } from "lucide-react";
@@ -17,8 +17,7 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   },
   draft: {
     label: "Rascunho",
-    className:
-      "bg-surface-container text-on-surface-variant border-outline-variant",
+    className: "bg-surface-container text-on-surface-variant border-outline-variant",
   },
 };
 
@@ -40,7 +39,9 @@ export default function ProjectPage() {
   }, [activeProjectId, fetchChapters]);
 
   const activeProject = projects.find((p) => p.id === activeProjectId);
-  const chapters = activeProjectId ? getChaptersByProject(activeProjectId) : [];
+  const chapters = activeProjectId
+    ? getChaptersByProject(activeProjectId)
+    : [];
 
   const { completedCount, totalWords } = useMemo(() => {
     let completed = 0;
@@ -55,15 +56,11 @@ export default function ProjectPage() {
   }, [chapters]);
   const targetWords = activeProject?.targetWordCount || 50000;
 
-  const statusProgress =
-    chapters.length > 0
-      ? Math.round((completedCount / chapters.length) * 100)
-      : 0;
+  const statusProgress = chapters.length > 0
+    ? Math.round((completedCount / chapters.length) * 100)
+    : 0;
 
-  const wordProgress = Math.min(
-    Math.round((totalWords / targetWords) * 100),
-    100,
-  );
+  const wordProgress = Math.min(Math.round((totalWords / targetWords) * 100), 100);
 
   // Show editor when a chapter is selected
   if (activeChapterId) {
@@ -74,6 +71,7 @@ export default function ProjectPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-3xl mx-auto p-6 md:p-12 space-y-8">
+
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
@@ -81,9 +79,7 @@ export default function ProjectPage() {
               {activeProject?.title || "Projeto"}
             </h1>
             <p className="text-sm text-on-surface-variant mt-1">
-              {activeProject?.author || "Autor"} · {chapters.length}{" "}
-              {chapters.length === 1 ? "capítulo" : "capítulos"} ·{" "}
-              {totalWords.toLocaleString("pt-BR")} palavras
+              {activeProject?.author || "Autor"} · {chapters.length} {chapters.length === 1 ? "capítulo" : "capítulos"} · {totalWords.toLocaleString("pt-BR")} palavras
             </p>
           </div>
           {activeProjectId && (
@@ -143,9 +139,7 @@ export default function ProjectPage() {
                   <h3 className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold">
                     Status dos Capítulos
                   </h3>
-                  <span className="text-xs text-on-surface-variant font-medium">
-                    {statusProgress}%
-                  </span>
+                  <span className="text-xs text-on-surface-variant font-medium">{statusProgress}%</span>
                 </div>
                 <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
                   <div
@@ -159,10 +153,7 @@ export default function ProjectPage() {
                   <h3 className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold">
                     Meta de Palavras do Projeto
                   </h3>
-                  <span className="text-xs text-on-surface-variant font-medium">
-                    {totalWords.toLocaleString("pt-BR")} /{" "}
-                    {targetWords.toLocaleString("pt-BR")}
-                  </span>
+                  <span className="text-xs text-on-surface-variant font-medium">{totalWords.toLocaleString("pt-BR")} / {targetWords.toLocaleString("pt-BR")}</span>
                 </div>
                 <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden relative">
                   <div
@@ -182,8 +173,7 @@ export default function ProjectPage() {
                 <ul className="divide-y divide-outline-variant">
                   {chapters.map((chapter, i) => {
                     const status = chapter.status || "draft";
-                    const statusInfo =
-                      STATUS_LABELS[status] ?? STATUS_LABELS["draft"];
+                    const statusInfo = STATUS_LABELS[status] ?? STATUS_LABELS["draft"];
                     return (
                       <li
                         key={chapter.id}
@@ -198,14 +188,13 @@ export default function ProjectPage() {
                             {chapter.title}
                           </span>
                           <span className="text-xs text-on-surface-variant shrink-0">
-                            {(chapter.wordCount || 0).toLocaleString("pt-BR")}{" "}
-                            pal
+                            {(chapter.wordCount || 0).toLocaleString("pt-BR")} pal
                           </span>
                         </div>
                         <span
                           className={cn(
                             "px-2.5 py-0.5 rounded-none text-[11px] font-medium border shrink-0",
-                            statusInfo.className,
+                            statusInfo.className
                           )}
                         >
                           {statusInfo.label}
