@@ -4,30 +4,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@gospelreads/db";
 import { chapters, projects } from "@gospelreads/db";
 import { generateId } from "@/lib/utils";
-import { verifyCloudflareToken } from "@/lib/auth/cloudflare";
+import { checkAuth } from "@/lib/auth/check-auth";
 import { projectSchema } from "@/lib/validations/project";
 
 // GET /api/projects — List all projects
 export async function GET(req: NextRequest) {
   try {
-    const user = await verifyCloudflareToken(req);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
-    if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ")
-          ? authHeader.substring(7)
-          : apiKeyHeader;
-
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     // Ideally we filter by user id here if the schema supported it:
@@ -61,34 +45,15 @@ export async function GET(req: NextRequest) {
 // POST /api/projects — Create project
 export async function POST(req: NextRequest) {
   try {
-    const user = await verifyCloudflareToken(req);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
-    if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ")
-          ? authHeader.substring(7)
-          : apiKeyHeader;
-
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const rawBody = await req.json();
 
     const parsedBody = projectSchema.safeParse(rawBody);
     if (!parsedBody.success) {
-      return NextResponse.json(
-        { error: "Validation error", details: parsedBody.error.format() },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Validation error", details: parsedBody.error.format() }, { status: 400 });
     }
 
     const body = parsedBody.data;

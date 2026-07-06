@@ -5,38 +5,18 @@ import { getRequestContext } from "@cloudflare/next-on-pages";
 import { getDb } from "@gospelreads/db";
 import { projects } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
-import { verifyCloudflareToken } from "@/lib/auth/cloudflare";
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
   const db = getDb(process.env as Record<string, unknown>);
 
   try {
-    const user = await verifyCloudflareToken(request);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
-    if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = request.headers.get("authorization");
-        const apiKeyHeader = request.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ")
-          ? authHeader.substring(7)
-          : apiKeyHeader;
-
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
-
     const [project] = await db
       .select()
       .from(projects)
@@ -56,24 +36,19 @@ export async function POST(
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
         { error: "Invalid file type. Allowed: JPEG, PNG, WebP" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     if (file.size > MAX_SIZE) {
       return NextResponse.json(
         { error: "File too large. Max 5MB" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const buffer = await file.arrayBuffer();
-    const ext =
-      file.type === "image/png"
-        ? "png"
-        : file.type === "image/webp"
-          ? "webp"
-          : "jpg";
+    const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const key = `covers/${id}_${Date.now()}.${ext}`;
 
     // Try R2 first, fall back to data URL for local dev
