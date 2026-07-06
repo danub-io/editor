@@ -121,7 +121,10 @@ export async function PUT(
     await db.update(projects).set(updates).where(eq(projects.id, id));
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update project", details: error.message },
+      { status: 500 }
+    );
   }
 }
 
