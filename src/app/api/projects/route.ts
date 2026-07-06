@@ -4,22 +4,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@gospelreads/db";
 import { chapters, projects } from "@gospelreads/db";
 import { generateId } from "@/lib/utils";
+import { verifyCloudflareToken } from "@/lib/auth/cloudflare";
+import { projectSchema } from "@/lib/validations/project";
 
 // GET /api/projects — List all projects
 export async function GET(req: NextRequest) {
   try {
-    const apiSecret = process.env.API_SECRET;
-    if (apiSecret) {
-      const authHeader = req.headers.get("authorization");
-      const apiKeyHeader = req.headers.get("x-api-key");
-      const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
+    const user = await verifyCloudflareToken(req);
+    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
+    if (!user) {
+      const apiSecret = process.env.API_SECRET;
+      if (apiSecret) {
+        const authHeader = req.headers.get("authorization");
+        const apiKeyHeader = req.headers.get("x-api-key");
+        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
 
-      if (token !== apiSecret) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (token !== apiSecret) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+      } else {
+         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
 
     const db = getDb(process.env as Record<string, unknown>);
+    // Ideally we filter by user id here if the schema supported it:
+    // const rows = await db.select().from(projects).where(eq(projects.userId, user.id)).all();
+    // Since it doesn't currently, we will just fetch all for now, but auth is in place.
     const rows = await db.select().from(projects).all();
     const result = rows.map((r: any) => ({
       ...r,
@@ -48,19 +59,32 @@ export async function GET(req: NextRequest) {
 // POST /api/projects — Create project
 export async function POST(req: NextRequest) {
   try {
-    const apiSecret = process.env.API_SECRET;
-    if (apiSecret) {
-      const authHeader = req.headers.get("authorization");
-      const apiKeyHeader = req.headers.get("x-api-key");
-      const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
+    const user = await verifyCloudflareToken(req);
+    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
+    if (!user) {
+      const apiSecret = process.env.API_SECRET;
+      if (apiSecret) {
+        const authHeader = req.headers.get("authorization");
+        const apiKeyHeader = req.headers.get("x-api-key");
+        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
 
-      if (token !== apiSecret) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (token !== apiSecret) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+      } else {
+         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
 
     const db = getDb(process.env as Record<string, unknown>);
-    const body = (await req.json()) as any as Record<string, any>;
+    const rawBody = await req.json();
+
+    const parsedBody = projectSchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return NextResponse.json({ error: "Validation error", details: parsedBody.error.format() }, { status: 400 });
+    }
+
+    const body = parsedBody.data;
     const now = new Date().toISOString();
     const id = generateId();
 
@@ -69,20 +93,20 @@ export async function POST(req: NextRequest) {
       title: body.title,
       author: body.author,
       description: body.description || null,
-      language: body.language || "pt-BR",
+      language: body.language,
       isbn: body.isbn || null,
-      categories: JSON.stringify(body.categories || []),
-      keywords: JSON.stringify(body.keywords || []),
+      categories: JSON.stringify(body.categories),
+      keywords: JSON.stringify(body.keywords),
       coverImage: body.coverImage || null,
-      settingsPageFormat: body.settings?.pageFormat || "6x9",
-      settingsFontFamily: body.settings?.fontFamily || "Lora",
-      settingsFontSize: body.settings?.fontSize || 11,
-      settingsLineHeight: body.settings?.lineHeight || 1.4,
-      settingsMarginTop: body.settings?.margins?.top || "2cm",
-      settingsMarginBottom: body.settings?.margins?.bottom || "2cm",
-      settingsMarginInner: body.settings?.margins?.inner || "2.5cm",
-      settingsMarginOuter: body.settings?.margins?.outer || "2cm",
-      settingsTheme: body.settings?.theme || "light",
+      settingsPageFormat: body.settings.pageFormat,
+      settingsFontFamily: body.settings.fontFamily,
+      settingsFontSize: body.settings.fontSize,
+      settingsLineHeight: body.settings.lineHeight,
+      settingsMarginTop: body.settings.margins.top,
+      settingsMarginBottom: body.settings.margins.bottom,
+      settingsMarginInner: body.settings.margins.inner,
+      settingsMarginOuter: body.settings.margins.outer,
+      settingsTheme: body.settings.theme,
       createdAt: now,
       updatedAt: now,
     });

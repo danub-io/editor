@@ -89,7 +89,7 @@ describe('editorStore', () => {
     useEditorStore.getState().setPlanningCards([]);
     expect(useEditorStore.getState().planningCards).toEqual([]);
 
-    useEditorStore.getState().setPlanningCards((prev) => [{ id: 'c1', column: 's1', title: 'T', content: 'C', tag: 'Tag' }]);
+    useEditorStore.getState().setPlanningCards((prev) => [{ id: 'c1', column: 's1', title: 'T', content: 'C', tag: 'Geral' }]);
     expect(useEditorStore.getState().planningCards.length).toBe(1);
   });
 

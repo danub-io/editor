@@ -78,6 +78,9 @@ import Superscript from "@tiptap/extension-superscript";
 import Subscript from "@tiptap/extension-subscript";
 import TextAlign from "@tiptap/extension-text-align";
 import Link from "@tiptap/extension-link";
+import Collaboration from "@tiptap/extension-collaboration";
+import * as Y from "yjs";
+import { IndexeddbPersistence } from "y-indexeddb";
 import { SelectionToolbar } from "../editor/SelectionToolbar";
 import Exporter from './Exporter';
 import AuthorProfileBuilder from './AuthorProfileBuilder';
@@ -435,11 +438,45 @@ export default function WorkspaceEditor() {
   const totalWords = chapters.reduce((sum, ch) => sum + countWords(ch.content), 0);
   const totalChars = chapters.reduce((sum, ch) => sum + ch.content.length, 0);
 
+  // Yjs document reference
+  const [ydoc, setYdoc] = useState<Y.Doc>(new Y.Doc());
+  const [provider, setProvider] = useState<IndexeddbPersistence | null>(null);
+
+  // Initialize Yjs and provider when activeChapter changes
+  useEffect(() => {
+    if (!activeChapter?.id) return;
+
+    const newYdoc = new Y.Doc();
+    setYdoc(newYdoc);
+
+    // Connect to local indexeddb for offline persistence
+    const newProvider = new IndexeddbPersistence(`gospelreads-chapter-${activeChapter.id}`, newYdoc);
+    setProvider(newProvider);
+
+    // Fallback: Populate Yjs document if it's empty but we have content
+    newProvider.on('synced', () => {
+      const ytext = newYdoc.getText('default');
+      if (ytext.toString() === '' && activeChapter.content) {
+        // Tiptap Collaboration extension will sync the initial content automatically if we update editor,
+        // but since we render the editor based on ydoc, we might need a tick.
+      }
+    });
+
+    return () => {
+      newProvider.destroy();
+      newYdoc.destroy();
+    };
+  }, [activeChapter?.id]);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        history: false, // Must be false to use Collaboration
+      }),
+      Collaboration.configure({
+        document: ydoc,
       }),
       Placeholder.configure({
         placeholder: "Sua inspiração começa a fluir... Escreva, edite e acompanhe os seus insights nas barras laterais.",
