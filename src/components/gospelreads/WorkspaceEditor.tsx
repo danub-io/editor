@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { useEditorStore } from '@/stores/editorStore';
 
@@ -222,6 +222,12 @@ interface PlanningBlock {
 }
 
 
+const countWords = (text: string) => {
+  if (!text || !text.trim()) return 0;
+  const cleanText = text.replace(/<[^>]*>/g, ' ');
+  return cleanText.trim().split(/\s+/).filter(Boolean).length;
+};
+
 export default function WorkspaceEditor() {
   const {
     books,
@@ -428,15 +434,17 @@ export default function WorkspaceEditor() {
   }, [rightTab, setRightTab]);
 
   // Word & statistics math
-  const countWords = (text: string) => {
-    if (!text || !text.trim()) return 0;
-    const cleanText = text.replace(/<[^>]*>/g, ' ');
-    return cleanText.trim().split(/\s+/).filter(Boolean).length;
-  };
+  const activeWords = useMemo(() => {
+    return activeChapter ? countWords(activeChapter.content) : 0;
+  }, [activeChapter?.content]);
 
-  const activeWords = activeChapter ? countWords(activeChapter.content) : 0;
-  const totalWords = chapters.reduce((sum, ch) => sum + countWords(ch.content), 0);
-  const totalChars = chapters.reduce((sum, ch) => sum + ch.content.length, 0);
+  const totalWords = useMemo(() => {
+    return chapters.reduce((sum, ch) => sum + countWords(ch.content), 0);
+  }, [chapters]);
+
+  const totalChars = useMemo(() => {
+    return chapters.reduce((sum, ch) => sum + ch.content.length, 0);
+  }, [chapters]);
 
   // Yjs document reference
   const [ydoc, setYdoc] = useState<Y.Doc>(new Y.Doc());
