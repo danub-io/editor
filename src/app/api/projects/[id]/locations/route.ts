@@ -5,7 +5,7 @@ import { getDb } from "@gospelreads/db";
 import { locations } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
-import { verifyCloudflareToken } from "@/lib/auth/cloudflare";
+import { checkAuth } from "@/lib/auth/check-auth";
 
 export async function GET(
   req: NextRequest,
@@ -13,21 +13,9 @@ export async function GET(
 ) {
   const { id } = await (params as any);
   try {
-    const user = await verifyCloudflareToken(req);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
+    const user = await checkAuth(req);
     if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
-
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const db = getDb(process.env as Record<string, unknown>);
@@ -44,21 +32,9 @@ export async function POST(
 ) {
   const { id } = await (params as any);
   try {
-    const user = await verifyCloudflareToken(req);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
+    const user = await checkAuth(req);
     if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
-
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const db = getDb(process.env as Record<string, unknown>);

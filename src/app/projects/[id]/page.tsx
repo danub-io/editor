@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect , useMemo } from "react";
 import { useProjectStore } from "@/stores/projectStore";
 import { Editor } from "@/components/editor/Editor";
 import { BookOpen, Settings } from "lucide-react";
@@ -43,10 +43,17 @@ export default function ProjectPage() {
     ? getChaptersByProject(activeProjectId)
     : [];
 
-  const completedCount = chapters.filter(
-    (c) => c.status === "completed"
-  ).length;
-  const totalWords = chapters.reduce((acc, c) => acc + (c.wordCount || 0), 0);
+  const { completedCount, totalWords } = useMemo(() => {
+    let completed = 0;
+    let words = 0;
+    for (let i = 0; i < chapters.length; i++) {
+      if (chapters[i].status === "completed") {
+        completed++;
+      }
+      words += chapters[i].wordCount || 0;
+    }
+    return { completedCount: completed, totalWords: words };
+  }, [chapters]);
   const targetWords = activeProject?.targetWordCount || 50000;
 
   const statusProgress = chapters.length > 0

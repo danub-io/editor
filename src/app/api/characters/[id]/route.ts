@@ -4,31 +4,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@gospelreads/db";
 import { characters } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
-import { verifyCloudflareToken } from "@/lib/auth/cloudflare";
+import { checkAuth } from "@/lib/auth/check-auth";
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
-    const user = await verifyCloudflareToken(req);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
-    if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
-
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
-
     const db = getDb(process.env as Record<string, unknown>);
     const body = (await req.json()) as any as Record<string, any>;
     const now = new Date().toISOString();
@@ -51,24 +37,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
-    const user = await verifyCloudflareToken(req);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
-    if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
-
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
-
     const db = getDb(process.env as Record<string, unknown>);
     await db.delete(characters).where(eq(characters.id, id));
     return NextResponse.json({ success: true });
