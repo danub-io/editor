@@ -15,8 +15,8 @@ export async function GET(
     const db = getDb(process.env as Record<string, unknown>);
     const rows = await db.select().from(locations).where(eq(locations.projectId, id)).all();
     return NextResponse.json(rows);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
 
@@ -41,7 +41,7 @@ export async function POST(
       updatedAt: now,
     });
     return NextResponse.json({ id: locId, projectId: id, name: body.name, type: body.type || "other", createdAt: now, updatedAt: now });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
