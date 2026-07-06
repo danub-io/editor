@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { useEditorStore } from '@/stores/editorStore';
 
@@ -222,6 +222,12 @@ interface PlanningBlock {
 }
 
 
+const countWords = (text: string) => {
+  if (!text || !text.trim()) return 0;
+  const cleanText = text.replace(/<[^>]*>/g, ' ');
+  return cleanText.trim().split(/\s+/).filter(Boolean).length;
+};
+
 export default function WorkspaceEditor() {
   const {
     books,
@@ -246,6 +252,13 @@ export default function WorkspaceEditor() {
     footnotes, setFootnotes,
     deletedChapters, setDeletedChapters
   } = useEditorStore();
+  const sectionIdToName = useMemo(() => {
+    return planningSections.reduce((acc, section) => {
+      acc[section.id] = section.name;
+      return acc;
+    }, {} as Record<string, string>);
+  }, [planningSections]);
+
   // Navigation & UI layouts
   const [leftTab, setLeftTab] = useState<'manuscript' | 'planning' | 'characters' | 'locations' | 'events' | 'statistics'>('manuscript');
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
@@ -428,15 +441,17 @@ export default function WorkspaceEditor() {
   }, [rightTab, setRightTab]);
 
   // Word & statistics math
-  const countWords = (text: string) => {
-    if (!text || !text.trim()) return 0;
-    const cleanText = text.replace(/<[^>]*>/g, ' ');
-    return cleanText.trim().split(/\s+/).filter(Boolean).length;
-  };
+  const activeWords = useMemo(() => {
+    return activeChapter ? countWords(activeChapter.content) : 0;
+  }, [activeChapter?.content]);
 
-  const activeWords = activeChapter ? countWords(activeChapter.content) : 0;
-  const totalWords = chapters.reduce((sum, ch) => sum + countWords(ch.content), 0);
-  const totalChars = chapters.reduce((sum, ch) => sum + ch.content.length, 0);
+  const totalWords = useMemo(() => {
+    return chapters.reduce((sum, ch) => sum + countWords(ch.content), 0);
+  }, [chapters]);
+
+  const totalChars = useMemo(() => {
+    return chapters.reduce((sum, ch) => sum + ch.content.length, 0);
+  }, [chapters]);
 
   // Yjs document reference
   const [ydoc, setYdoc] = useState<Y.Doc>(new Y.Doc());
@@ -1020,6 +1035,8 @@ export default function WorkspaceEditor() {
   // Local state for right active sidebar tool
   const [activeRightTool, setActiveRightTool] = useState<string | null>(null);
 
+  const pinnedCardsSet = React.useMemo(() => new Set(pinnedCardsList), [pinnedCardsList]);
+
   return (
         <div className="w-full flex bg-surface dark:bg-surface h-screen max-h-screen overflow-hidden relative editor-workspace flex-col lg:flex-row">
       <MobileNav
@@ -1150,7 +1167,7 @@ export default function WorkspaceEditor() {
                   {/* Cards horizontal shelf */}
                   <div className="flex flex-wrap gap-4">
                     {planningCards.filter(c => c.column === section.id).map(card => {
-                      const isPinned = pinnedCardsList && pinnedCardsList.includes(card.id);
+                      const isPinned = pinnedCardsList && pinnedCardsSet.has(card.id);
                       return (
                         <div 
                           key={card.id}
@@ -1534,7 +1551,7 @@ export default function WorkspaceEditor() {
                         }
                       }}
                     >
-                      {planningCards.filter(c => pinnedCardsList.includes(c.id)).map((card, idx) => (
+                      {planningCards.filter(c => pinnedCardsSet.has(c.id)).map((card, idx) => (
                         <div 
                           key={card.id} 
                           draggable
@@ -1607,12 +1624,12 @@ export default function WorkspaceEditor() {
                           />
                           
                           <div className="flex justify-between items-center text-[10px] text-on-surface-variant dark:text-on-surface-variant pt-1">
-                            <span className="font-mono">Seção: {planningSections.find(s => s.id === card.column)?.name || 'Geral'}</span>
+                            <span className="font-mono">Seção: {sectionIdToName[card.column] || 'Geral'}</span>
                             <span className="opacity-0 group-hover:opacity-100 transition-opacity">⋮ Drag to reorder</span>
                           </div>
                         </div>
                       ))}
-                      {planningCards.filter(c => pinnedCardsList.includes(c.id)).length === 0 && (
+                      {planningCards.filter(c => pinnedCardsSet.has(c.id)).length === 0 && (
                         <div className="text-center py-8 text-neutral-600 dark:text-neutral-600 text-xs italic font-sans">Nenhum card fixado.</div>
                       )}
                     </div>
