@@ -1,11 +1,11 @@
 export const runtime = "edge";
 
-import { requireAuth } from "@/lib/auth/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@gospelreads/db";
 import { chapters } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
 import { chapterSchema } from "@/lib/validations/project";
+import { checkAuth } from "@/lib/auth/check-auth";
 
 // PUT /api/chapters/[id]
 export async function PUT(
@@ -14,9 +14,8 @@ export async function PUT(
 ) {
   const { id } = await (params as any);
   try {
-    const authError = await requireAuth(req);
-    if (authError) return authError;
-
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const rawBody = await req.json();
@@ -53,9 +52,8 @@ export async function DELETE(
 ) {
   const { id } = await (params as any);
   try {
-    const authError = await requireAuth(req);
-    if (authError) return authError;
-
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     await db.delete(chapters).where(eq(chapters.id, id));

@@ -1,10 +1,10 @@
 export const runtime = "edge";
 
-import { requireAuth } from "@/lib/auth/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@gospelreads/db";
 import { projects } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
+import { checkAuth } from "@/lib/auth/check-auth";
 import { projectSchema } from "@/lib/validations/project";
 
 // GET /api/projects/[id]
@@ -14,9 +14,8 @@ export async function GET(
 ) {
   const { id } = await (params as any);
   try {
-    const authError = await requireAuth(req);
-    if (authError) return authError;
-
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const [row] = await db.select().from(projects).where(eq(projects.id, id));
@@ -51,9 +50,8 @@ export async function PUT(
 ) {
   const { id } = await (params as any);
   try {
-    const authError = await requireAuth(req);
-    if (authError) return authError;
-
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const rawBody = await req.json();
@@ -95,7 +93,10 @@ export async function PUT(
     await db.update(projects).set(updates).where(eq(projects.id, id));
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update project", details: error.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -106,9 +107,8 @@ export async function DELETE(
 ) {
   const { id } = await (params as any);
   try {
-    const authError = await requireAuth(req);
-    if (authError) return authError;
-
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     await db.delete(projects).where(eq(projects.id, id));

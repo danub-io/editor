@@ -1,16 +1,12 @@
 import { jwtVerify, createRemoteJWKSet } from 'jose';
 import { NextRequest } from 'next/server';
 
-const CLOUDFLARE_TEAM_DOMAIN = process.env.CLOUDFLARE_TEAM_DOMAIN || '';
+const CLOUDFLARE_TEAM_DOMAIN = process.env.CLOUDFLARE_TEAM_DOMAIN || 'https://example.cloudflareaccess.com';
 const CLOUDFLARE_AUDIENCE = process.env.CLOUDFLARE_AUDIENCE || '';
 
-const getJWKS = () => {
-  if (!CLOUDFLARE_TEAM_DOMAIN) {
-    return null;
-  }
-  return createRemoteJWKSet(new URL(`${CLOUDFLARE_TEAM_DOMAIN}/cdn-cgi/access/certs`));
-};
-const JWKS = getJWKS();
+const JWKS = createRemoteJWKSet(
+  new URL(`${CLOUDFLARE_TEAM_DOMAIN}/cdn-cgi/access/certs`)
+);
 
 export async function verifyCloudflareToken(req: NextRequest): Promise<{ email?: string; id?: string } | null> {
   const token = req.headers.get('Cf-Access-Jwt-Assertion') || req.cookies.get('CF_Authorization')?.value;
@@ -20,7 +16,6 @@ export async function verifyCloudflareToken(req: NextRequest): Promise<{ email?:
   }
 
   try {
-    if (!JWKS) return null;
     const { payload } = await jwtVerify(token, JWKS, {
       audience: CLOUDFLARE_AUDIENCE,
       issuer: CLOUDFLARE_TEAM_DOMAIN,

@@ -1,6 +1,5 @@
 export const runtime = "edge";
 
-import { requireAuth } from "@/lib/auth/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestContext } from "@cloudflare/next-on-pages";
 import { getDb } from "@gospelreads/db";
@@ -11,16 +10,13 @@ const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export async function POST(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
   const db = getDb(process.env as Record<string, unknown>);
 
   try {
-    const authError = await requireAuth(req);
-    if (authError) return authError;
-
     const [project] = await db
       .select()
       .from(projects)
@@ -30,7 +26,7 @@ export async function POST(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const formData = await req.formData();
+    const formData = await request.formData();
     const file = formData.get("file");
 
     if (!file || !(file instanceof File)) {
