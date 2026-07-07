@@ -70,4 +70,36 @@ describe('ThemeToggle', () => {
     expect(mockSetTheme).toHaveBeenCalledWith('light');
     expect(mockSetTheme).toHaveBeenCalledTimes(1);
   });
+
+  it('toggles theme from system to light', () => {
+    vi.mocked(nextThemes.useTheme).mockReturnValue({
+      theme: 'system',
+      setTheme: mockSetTheme,
+      themes: ['light', 'dark', 'system'],
+    });
+
+    render(<ThemeToggle />);
+
+    const button = screen.getByRole('button', { name: /toggle theme/i });
+    fireEvent.click(button);
+
+    expect(mockSetTheme).toHaveBeenCalledWith('light');
+    expect(mockSetTheme).toHaveBeenCalledTimes(1);
+  });
+
+  it('toggles theme from undefined to light', () => {
+    vi.mocked(nextThemes.useTheme).mockReturnValue({
+      theme: undefined,
+      setTheme: mockSetTheme,
+      themes: ['light', 'dark', 'system'],
+    });
+
+    render(<ThemeToggle />);
+
+    const button = screen.getByRole('button', { name: /toggle theme/i });
+    fireEvent.click(button);
+
+    expect(mockSetTheme).toHaveBeenCalledWith('light');
+    expect(mockSetTheme).toHaveBeenCalledTimes(1);
+  });
 });
