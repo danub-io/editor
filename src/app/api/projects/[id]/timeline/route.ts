@@ -5,6 +5,7 @@ import { checkAuth } from "@/lib/auth/check-auth";
 import { getDb } from "@gospelreads/db";
 import { timelineEvents } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
+import type { InferSelectModel } from "drizzle-orm";
 import { checkAuth } from "@/lib/auth/check-auth";
 
 import { generateId } from "@/lib/utils";
@@ -27,6 +28,7 @@ export async function GET(
 
     const db = getDb(process.env as Record<string, unknown>);
     const rows = await db.select().from(timelineEvents).where(eq(timelineEvents.projectId, id)).all();
+    return NextResponse.json(rows.map((r: InferSelectModel<typeof timelineEvents> & { characterIds?: string }) => ({ ...r, characterIds: JSON.parse(r.characterIds || "[]") })));
     return NextResponse.json(rows.map((r: any) => ({ ...r, characterIds: JSON.parse(r.characterIds || "[]") })));
   } catch (error) {
     return NextResponse.json(
