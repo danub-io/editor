@@ -20,6 +20,7 @@ export async function GET(
     const db = getDb(process.env as Record<string, unknown>);
     const [row] = await db.select().from(projects).where(eq(projects.id, id));
     if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({
       ...row,
       categories: JSON.parse(row.categories || "[]"),
       keywords: JSON.parse(row.keywords || "[]"),
@@ -38,6 +39,7 @@ export async function GET(
       },
     });
   } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
 
@@ -57,6 +59,7 @@ export async function PUT(
     // Using partial schema since PUT might not include all fields
     const parsedBody = projectSchema.partial().safeParse(rawBody);
     if (!parsedBody.success) {
+      return NextResponse.json({ error: "Validation error", details: parsedBody.error.format() }, { status: 400 });
     }
 
     const body = parsedBody.data;
@@ -88,7 +91,12 @@ export async function PUT(
     }
 
     await db.update(projects).set(updates).where(eq(projects.id, id));
+    return NextResponse.json({ success: true });
   } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to update project", details: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -104,6 +112,8 @@ export async function DELETE(
 
     const db = getDb(process.env as Record<string, unknown>);
     await db.delete(projects).where(eq(projects.id, id));
+    return NextResponse.json({ success: true });
   } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
