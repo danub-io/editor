@@ -9,9 +9,12 @@ import { projectSchema } from "@/lib/validations/project";
 
 // GET /api/projects — List all projects
 export async function GET(req: NextRequest) {
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
-    const { user, error: authError } = await checkAuth(req);
-    if (authError) return authError;
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     // Ideally we filter by user id here if the schema supported it:
@@ -44,9 +47,12 @@ export async function GET(req: NextRequest) {
 
 // POST /api/projects — Create project
 export async function POST(req: NextRequest) {
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
-    const { user, error: authError } = await checkAuth(req);
-    if (authError) return authError;
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const rawBody = await req.json();

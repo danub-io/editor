@@ -13,9 +13,12 @@ const createChapterSchema = chapterSchema.extend({
 });
 
 export async function POST(req: NextRequest) {
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
-    const { user, error: authError } = await checkAuth(req);
-    if (authError) return authError;
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const rawBody = await req.json();

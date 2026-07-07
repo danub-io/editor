@@ -14,8 +14,8 @@ export async function GET(
 ) {
   const { id } = await (params as any);
   try {
-    const { user, error: authError } = await checkAuth(req);
-    if (authError) return authError;
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const [row] = await db.select().from(projects).where(eq(projects.id, id));
@@ -50,8 +50,8 @@ export async function PUT(
 ) {
   const { id } = await (params as any);
   try {
-    const { user, error: authError } = await checkAuth(req);
-    if (authError) return authError;
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const rawBody = await req.json();
@@ -107,8 +107,8 @@ export async function DELETE(
 ) {
   const { id } = await (params as any);
   try {
-    const { user, error: authError } = await checkAuth(req);
-    if (authError) return authError;
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     await db.delete(projects).where(eq(projects.id, id));
