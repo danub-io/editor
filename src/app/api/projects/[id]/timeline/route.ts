@@ -6,6 +6,7 @@ import { getDb } from "@gospelreads/db";
 import { timelineEvents } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
+import { checkAuth } from "@/lib/auth/check-auth";
 
 export async function GET(
   req: NextRequest,
@@ -13,6 +14,11 @@ export async function GET(
 ) {
   const { id } = await params;
   try {
+    const user = await checkAuth(req);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const db = getDb(process.env as Record<string, unknown>);
     const rows = await db.select().from(timelineEvents).where(eq(timelineEvents.projectId, id)).all();
     return NextResponse.json(rows.map((r: any) => ({ ...r, characterIds: JSON.parse(r.characterIds || "[]") })));
@@ -30,6 +36,11 @@ export async function POST(
 ) {
   const { id } = await params;
   try {
+    const user = await checkAuth(req);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const db = getDb(process.env as Record<string, unknown>);
     const body = (await req.json()) as Record<string, unknown>;
     const now = new Date().toISOString();
