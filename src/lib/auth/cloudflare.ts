@@ -4,14 +4,14 @@ import { NextRequest } from 'next/server';
 const CLOUDFLARE_TEAM_DOMAIN = process.env.CLOUDFLARE_TEAM_DOMAIN || 'https://example.cloudflareaccess.com';
 const CLOUDFLARE_AUDIENCE = process.env.CLOUDFLARE_AUDIENCE || '';
 
-const JWKS = createRemoteJWKSet(
+const JWKS = CLOUDFLARE_TEAM_DOMAIN ? createRemoteJWKSet(
   new URL(`${CLOUDFLARE_TEAM_DOMAIN}/cdn-cgi/access/certs`)
-);
+) : null;
 
 export async function verifyCloudflareToken(req: NextRequest): Promise<{ email?: string; id?: string } | null> {
   const token = req.headers.get('Cf-Access-Jwt-Assertion') || req.cookies.get('CF_Authorization')?.value;
 
-  if (!token) {
+  if (!token || !JWKS) {
     return null;
   }
 

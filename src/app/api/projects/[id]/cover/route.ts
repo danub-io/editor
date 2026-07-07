@@ -1,6 +1,7 @@
 export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
+import { checkAuth } from "@/lib/auth/check-auth";
 import { getRequestContext } from "@cloudflare/next-on-pages";
 import { getDb } from "@gospelreads/db";
 import { projects } from "@gospelreads/db";
@@ -13,10 +14,15 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await (params as any);
+  const { id } = await params;
   const db = getDb(process.env as Record<string, unknown>);
 
   try {
+    const user = await checkAuth(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const [project] = await db
       .select()
       .from(projects)
