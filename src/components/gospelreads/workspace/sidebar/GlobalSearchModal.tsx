@@ -15,6 +15,7 @@ export function GlobalSearchModal({
   setActiveRightTool
 }: any) {
   const { chapters, planningCards, pinnedCardsList, planningBoards } = useEditorStore();
+  const pinnedCardsSet = React.useMemo(() => new Set(pinnedCardsList || []), [pinnedCardsList]);
 
   if (!globalSearchOpen) return null;
 
@@ -67,7 +68,7 @@ export function GlobalSearchModal({
             );
 
             const noteResults = planningCards.filter((c: PlanningCard) =>
-              pinnedCardsList.includes(c.id) &&
+              pinnedCardsSet.has(c.id) &&
               (c.title.toLowerCase().includes(q) || c.content.toLowerCase().includes(q))
             );
 
