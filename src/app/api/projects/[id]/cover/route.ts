@@ -1,6 +1,7 @@
 export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
+import { checkAuth } from "@/lib/auth/check-auth";
 import { getRequestContext } from "@cloudflare/next-on-pages";
 import { getDb } from "@gospelreads/db";
 import { projects } from "@gospelreads/db";

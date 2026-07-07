@@ -9,6 +9,9 @@ import { projectSchema } from "@/lib/validations/project";
 
 // GET /api/projects — List all projects
 export async function GET(req: NextRequest) {
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
     const user = await checkAuth(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,6 +47,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/projects — Create project
 export async function POST(req: NextRequest) {
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
     const user = await checkAuth(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

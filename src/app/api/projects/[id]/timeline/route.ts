@@ -1,6 +1,7 @@
 export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
+import { checkAuth } from "@/lib/auth/check-auth";
 import { getDb } from "@gospelreads/db";
 import { timelineEvents } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
