@@ -5,12 +5,14 @@ import { checkAuth } from "@/lib/auth/check-auth";
 import { getDb } from "@gospelreads/db";
 import { characters } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
+import { checkAuth } from "@/lib/auth/check-auth";
+
 import { generateId } from "@/lib/utils";
 import { checkAuth } from "@/lib/auth/check-auth";
 
 // GET /api/projects/[id]/characters
 export async function GET(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
@@ -18,6 +20,10 @@ export async function GET(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    const user = await checkAuth(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const user = await checkAuth(req);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -42,7 +48,7 @@ export async function GET(
 
 // POST /api/projects/[id]/characters
 export async function POST(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
@@ -50,13 +56,17 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    const user = await checkAuth(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const user = await checkAuth(req);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const db = getDb(process.env as Record<string, unknown>);
-    const body = (await req.json()) as any as Record<string, any>;
+    const body = (await request.json()) as any as Record<string, any>;
     const now = new Date().toISOString();
     const charId = generateId();
 

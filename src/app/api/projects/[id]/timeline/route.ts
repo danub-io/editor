@@ -5,15 +5,21 @@ import { checkAuth } from "@/lib/auth/check-auth";
 import { getDb } from "@gospelreads/db";
 import { timelineEvents } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
+import { checkAuth } from "@/lib/auth/check-auth";
+
 import { generateId } from "@/lib/utils";
 import { checkAuth } from "@/lib/auth/check-auth";
 
 export async function GET(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   try {
+    const user = await checkAuth(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const user = await checkAuth(req);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -31,11 +37,17 @@ export async function GET(
 }
 
 export async function POST(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   try {
+    const user = await checkAuth(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const db = getDb(process.env as Record<string, unknown>);
+    const body = (await request.json()) as Record<string, unknown>;
     const user = await checkAuth(req);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
