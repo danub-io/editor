@@ -53,25 +53,27 @@ export default function ProductionTimelinePage() {
     [chapters]
   );
 
-  const totalWords = useMemo(
-    () => chapters.reduce((acc, c) => acc + (c.wordCount || 0), 0),
-    [chapters]
-  );
+  const { totalWords, draftCount, reviewCount, completedCount } = useMemo(() => {
+    let words = 0;
+    let draft = 0;
+    let review = 0;
+    let completed = 0;
 
-  const draftCount = useMemo(
-    () => chapters.filter((c) => c.status === "draft").length,
-    [chapters]
-  );
+    for (let i = 0; i < chapters.length; i++) {
+      const c = chapters[i];
+      words += c.wordCount || 0;
+      if (c.status === "draft") draft++;
+      else if (c.status === "review") review++;
+      else if (c.status === "completed") completed++;
+    }
 
-  const reviewCount = useMemo(
-    () => chapters.filter((c) => c.status === "review").length,
-    [chapters]
-  );
-
-  const completedCount = useMemo(
-    () => chapters.filter((c) => c.status === "completed").length,
-    [chapters]
-  );
+    return {
+      totalWords: words,
+      draftCount: draft,
+      reviewCount: review,
+      completedCount: completed
+    };
+  }, [chapters]);
 
   const totalChapters = chapters.length;
 

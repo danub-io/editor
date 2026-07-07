@@ -1,6 +1,7 @@
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { ThemeProvider } from '../ThemeProvider';
+import { ThemeProvider } from './ThemeProvider';
 
 // Mock next-themes as it uses React Context and window object which might be missing/complex in jsdom
 vi.mock('next-themes', () => ({

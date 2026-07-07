@@ -1,12 +1,11 @@
 export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
-import { checkAuth } from "@/lib/auth/check-auth";
 import { getDb } from "@gospelreads/db";
 import { chapters } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
-import { verifyCloudflareToken } from "@/lib/auth/cloudflare";
+import { checkAuth } from "@/lib/auth/check-auth";
 
 // GET /api/projects/[id]/chapters
 export async function GET(
@@ -15,22 +14,8 @@ export async function GET(
 ) {
   const { id } = await params;
   try {
-    const user = await verifyCloudflareToken(req);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
-    if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
-
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const rows = await db
@@ -73,22 +58,8 @@ export async function POST(
 ) {
   const { id } = await params;
   try {
-    const user = await verifyCloudflareToken(req);
-    // If not authenticated via CF Access, fallback to API_SECRET for backward compatibility/local dev
-    if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
-
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const body = (await req.json()) as ChapterPayload;

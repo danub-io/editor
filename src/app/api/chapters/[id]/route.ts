@@ -13,9 +13,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
-    const authResult = await checkAuth(req);
-    if (authResult.error) return authResult.error;
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const rawBody = await req.json();
@@ -51,9 +54,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
-    const authResult = await checkAuth(req);
-    if (authResult.error) return authResult.error;
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     await db.delete(chapters).where(eq(chapters.id, id));
