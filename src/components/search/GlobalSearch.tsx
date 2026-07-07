@@ -56,13 +56,16 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
 
       chapters.forEach((chapter) => {
         // Search in title
-        if (chapter.title.toLowerCase().includes(lowerQuery)) {
+        const lowerTitle = chapter.title.toLowerCase();
+        const titleIndex = lowerTitle.indexOf(lowerQuery);
+
+        if (titleIndex !== -1) {
           newResults.push({
             chapterId: chapter.id,
             chapterTitle: chapter.title,
             type: "title",
             snippet: chapter.title,
-            index: chapter.title.toLowerCase().indexOf(lowerQuery),
+            index: titleIndex,
           });
         }
 
@@ -70,13 +73,15 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
         const plainContent = chapter.content
           ? chapter.content.replace(/<[^>]+>/g, "")
           : "";
-        
-        if (plainContent.toLowerCase().includes(lowerQuery)) {
-          const index = plainContent.toLowerCase().indexOf(lowerQuery);
+
+        const lowerPlainContent = plainContent.toLowerCase();
+        const index = lowerPlainContent.indexOf(lowerQuery);
+
+        if (index !== -1) {
           const start = Math.max(0, index - 40);
           const end = Math.min(plainContent.length, index + query.length + 40);
           let snippet = plainContent.substring(start, end);
-          
+
           if (start > 0) snippet = "..." + snippet;
           if (end < plainContent.length) snippet = snippet + "...";
 
@@ -103,14 +108,21 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
 
   if (!isOpen) return null;
 
+  const renderLowerQuery = query.toLowerCase();
+
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh]">
-      <div 
+      <div
         className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      
-      <div className="relative w-full max-w-2xl bg-surface-container-lowest shadow-none overflow-hidden animate-in fade-in zoom-in-95 duration-200" role="dialog" aria-modal="true" aria-label="Buscar no manuscrito">
+
+      <div
+        className="relative w-full max-w-2xl bg-surface-container-lowest shadow-none overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Buscar no manuscrito"
+      >
         {/* Search Header */}
         <div className="flex items-center px-4 py-3 border-b border-outline-variant bg-surface-container">
           <Search className="h-5 w-5 text-on-surface-variant shrink-0" />
@@ -158,18 +170,25 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                     <div className="text-sm text-on-surface/70 truncate">
                       {result.type === "content" ? (
                         <>
-                          {result.snippet.split(new RegExp(`(${query})`, "gi")).map((part, index) => 
-                            part.toLowerCase() === query.toLowerCase() ? (
-                              <span key={index} className="bg-yellow-200 text-yellow-900 font-medium px-0.5 rounded">
-                                {part}
-                              </span>
-                            ) : (
-                              <span key={index}>{part}</span>
-                            )
-                          )}
+                          {result.snippet
+                            .split(new RegExp(`(${query})`, "gi"))
+                            .map((part, index) =>
+                              part.toLowerCase() === renderLowerQuery ? (
+                                <span
+                                  key={index}
+                                  className="bg-yellow-200 text-yellow-900 font-medium px-0.5 rounded"
+                                >
+                                  {part}
+                                </span>
+                              ) : (
+                                <span key={index}>{part}</span>
+                              ),
+                            )}
                         </>
                       ) : (
-                        <span className="text-on-surface-variant italic">Corresponde ao título do capítulo</span>
+                        <span className="text-on-surface-variant italic">
+                          Corresponde ao título do capítulo
+                        </span>
                       )}
                     </div>
                   </div>
@@ -184,7 +203,9 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
               </p>
               <div className="mt-4 flex items-center justify-center gap-2 text-xs text-on-surface-variant">
                 <span>Dica: Pressione</span>
-                <kbd className="px-1.5 py-0.5 bg-surface-container-high border border-outline-variant font-mono">Esc</kbd>
+                <kbd className="px-1.5 py-0.5 bg-surface-container-high border border-outline-variant font-mono">
+                  Esc
+                </kbd>
                 <span>para fechar</span>
               </div>
             </div>
