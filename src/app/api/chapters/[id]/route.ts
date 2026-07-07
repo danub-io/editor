@@ -13,6 +13,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
     const user = await checkAuth(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -51,6 +54,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await (params as any);
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
     const user = await checkAuth(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

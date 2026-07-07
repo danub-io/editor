@@ -1,10 +1,12 @@
 export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
+import { checkAuth } from "@/lib/auth/check-auth";
 import { getRequestContext } from "@cloudflare/next-on-pages";
 import { getDb } from "@gospelreads/db";
 import { projects } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
+import { checkAuth } from "@/lib/auth/check-auth";
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -17,6 +19,11 @@ export async function POST(
   const db = getDb(process.env as Record<string, unknown>);
 
   try {
+    const user = await checkAuth(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const [project] = await db
       .select()
       .from(projects)
