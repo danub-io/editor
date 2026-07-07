@@ -55,6 +55,7 @@ export function RightSidebar({
   setFootnotes,
   editor
 }: any) {
+  const pinnedCardsSet = React.useMemo(() => new Set(pinnedCardsList || []), [pinnedCardsList]);
   const sectionIdToName = useMemo(() => {
     if (!planningSections) return {};
     return planningSections.reduce((acc: Record<string, string>, section: any) => {
@@ -322,7 +323,7 @@ export function RightSidebar({
                 }
               }}
             >
-              {planningCards.filter((c: any) => pinnedCardsList.includes(c.id)).map((card: any) => (
+              {planningCards.filter((c: any) => pinnedCardsSet.has(c.id)).map((card: any) => (
                 <div
                   key={card.id}
                   draggable
@@ -400,7 +401,7 @@ export function RightSidebar({
                   </div>
                 </div>
               ))}
-              {planningCards.filter((c: any) => pinnedCardsList.includes(c.id)).length === 0 && (
+              {planningCards.filter((c: any) => pinnedCardsSet.has(c.id)).length === 0 && (
                 <div className="text-center py-8 text-neutral-600 dark:text-neutral-600 text-xs italic font-sans">Nenhum card fixado.</div>
               )}
             </div>
