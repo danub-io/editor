@@ -3,7 +3,7 @@ export const runtime = "edge";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@gospelreads/db";
 import { chapters } from "@gospelreads/db";
-import { verifyCloudflareToken } from "@/lib/auth/cloudflare";
+import { checkAuth } from "@/lib/auth/check-auth";
 import { chapterSchema } from "@/lib/validations/project";
 import { generateId } from "@/lib/utils";
 import { z } from "zod";
@@ -13,22 +13,12 @@ const createChapterSchema = chapterSchema.extend({
 });
 
 export async function POST(req: NextRequest) {
-  try {
-    const user = await verifyCloudflareToken(req);
-    if (!user) {
-      const apiSecret = process.env.API_SECRET;
-      if (apiSecret) {
-        const authHeader = req.headers.get("authorization");
-        const apiKeyHeader = req.headers.get("x-api-key");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : apiKeyHeader;
+  const user = await checkAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        if (token !== apiSecret) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-      } else {
-         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
+  try {
+    const user = await checkAuth(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = getDb(process.env as Record<string, unknown>);
     const rawBody = await req.json();
@@ -57,7 +47,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ id, ...body, createdAt: now, updatedAt: now });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }

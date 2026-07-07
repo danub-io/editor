@@ -17,6 +17,8 @@ import {
   Frown
 } from 'lucide-react';
 
+import { useMemo } from 'react';
+
 export function RightSidebar({
   activeRightTool,
   setActiveRightTool,
@@ -53,6 +55,15 @@ export function RightSidebar({
   setFootnotes,
   editor
 }: any) {
+  const pinnedCardsSet = React.useMemo(() => new Set(pinnedCardsList || []), [pinnedCardsList]);
+  const sectionIdToName = useMemo(() => {
+    if (!planningSections) return {};
+    return planningSections.reduce((acc: Record<string, string>, section: any) => {
+      acc[section.id] = section.name;
+      return acc;
+    }, {});
+  }, [planningSections]);
+
   if (!activeRightTool) return null;
 
   return (
@@ -312,7 +323,7 @@ export function RightSidebar({
                 }
               }}
             >
-              {planningCards.filter((c: any) => pinnedCardsList.includes(c.id)).map((card: any) => (
+              {planningCards.filter((c: any) => pinnedCardsSet.has(c.id)).map((card: any) => (
                 <div
                   key={card.id}
                   draggable
@@ -385,12 +396,12 @@ export function RightSidebar({
                   />
 
                   <div className="flex justify-between items-center text-[10px] text-on-surface-variant dark:text-on-surface-variant pt-1">
-                    <span className="font-mono">Seção: {planningSections.find((s: any) => s.id === card.column)?.name || 'Geral'}</span>
+                    <span className="font-mono">Seção: {sectionIdToName[card.column] || 'Geral'}</span>
                     <span className="opacity-0 group-hover:opacity-100 transition-opacity">⋮ Drag to reorder</span>
                   </div>
                 </div>
               ))}
-              {planningCards.filter((c: any) => pinnedCardsList.includes(c.id)).length === 0 && (
+              {planningCards.filter((c: any) => pinnedCardsSet.has(c.id)).length === 0 && (
                 <div className="text-center py-8 text-neutral-600 dark:text-neutral-600 text-xs italic font-sans">Nenhum card fixado.</div>
               )}
             </div>

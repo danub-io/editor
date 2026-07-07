@@ -20,6 +20,7 @@ export function KanbanBoard({
   onCardClick: (id: string) => void;
 }) {
   const { planningSections, planningCards, setPlanningCards, pinnedCardsList, setPinnedCardsList, setDeletedPlanningCards } = useEditorStore();
+  const pinnedCardsSet = React.useMemo(() => new Set(pinnedCardsList || []), [pinnedCardsList]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -101,7 +102,7 @@ export function KanbanBoard({
 
               <DroppableSection id={section.id} className="flex flex-wrap gap-4 min-h-[150px] p-2 -m-2">
                 {planningCards.filter(c => c.column === section.id).map(card => {
-                  const isPinned = pinnedCardsList.includes(card.id);
+                  const isPinned = pinnedCardsSet.has(card.id);
                   return (
                     <SortableCard
                       key={card.id}
