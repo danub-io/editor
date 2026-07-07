@@ -37,8 +37,9 @@ export async function GET(req: NextRequest) {
       },
     }));
     return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -106,7 +107,8 @@ export async function POST(req: NextRequest) {
       createdAt: now,
       updatedAt: now,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
