@@ -70,7 +70,6 @@ describe('ThemeToggle', () => {
     expect(mockSetTheme).toHaveBeenCalledWith('light');
     expect(mockSetTheme).toHaveBeenCalledTimes(1);
   });
-
   it('toggles theme from system to light', () => {
     vi.mocked(nextThemes.useTheme).mockReturnValue({
       theme: 'system',

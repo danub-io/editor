@@ -6,10 +6,7 @@ import { getDb } from "@gospelreads/db";
 import { timelineEvents } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
-import { checkAuth } from "@/lib/auth/check-auth";
-
 import { generateId } from "@/lib/utils";
-import { checkAuth } from "@/lib/auth/check-auth";
 
 export async function GET(
   request: NextRequest,
@@ -21,15 +18,10 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const user = await checkAuth(req);
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const db = getDb(process.env as Record<string, unknown>);
     const rows = await db.select().from(timelineEvents).where(eq(timelineEvents.projectId, id)).all();
     return NextResponse.json(rows.map((r: InferSelectModel<typeof timelineEvents> & { characterIds?: string }) => ({ ...r, characterIds: JSON.parse(r.characterIds || "[]") })));
-    return NextResponse.json(rows.map((r: any) => ({ ...r, characterIds: JSON.parse(r.characterIds || "[]") })));
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
@@ -50,13 +42,6 @@ export async function POST(
     }
     const db = getDb(process.env as Record<string, unknown>);
     const body = (await request.json()) as Record<string, unknown>;
-    const user = await checkAuth(req);
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const db = getDb(process.env as Record<string, unknown>);
-    const body = (await req.json()) as Record<string, unknown>;
     const now = new Date().toISOString();
     const eventId = generateId();
     const title = typeof body.title === 'string' ? body.title : 'Untitled';

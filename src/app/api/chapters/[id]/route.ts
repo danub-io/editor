@@ -12,10 +12,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await (params as any);
-  const user = await checkAuth(req);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+  const { id } = await params;
   try {
     const user = await checkAuth(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,7 +27,7 @@ export async function PUT(
 
     const body = parsedBody.data;
     const now = new Date().toISOString();
-    const updates: Record<string, any> = { updatedAt: now };
+    const updates: Record<string, unknown> = { updatedAt: now };
 
     if (body.title !== undefined) updates.title = body.title;
     if (body.content !== undefined) updates.content = body.content;
@@ -53,10 +50,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await (params as any);
-  const user = await checkAuth(req);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+  const { id } = await params;
   try {
     const user = await checkAuth(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

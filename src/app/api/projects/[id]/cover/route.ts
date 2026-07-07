@@ -6,7 +6,6 @@ import { getRequestContext } from "@cloudflare/next-on-pages";
 import { getDb } from "@gospelreads/db";
 import { projects } from "@gospelreads/db";
 import { eq } from "drizzle-orm";
-import { checkAuth } from "@/lib/auth/check-auth";
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -15,7 +14,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await (params as any);
+  const { id } = await params;
   const db = getDb(process.env as Record<string, unknown>);
 
   try {
